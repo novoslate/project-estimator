@@ -48,11 +48,29 @@
 		root.innerHTML = '';
 
 		var uid = 'nse' + Math.random().toString(36).slice(2, 8);
-		var opts = cfg.options || [], addons = cfg.addons || [], dims = cfg.dims || [];
+		var projects = Array.isArray(cfg.projects) && cfg.projects.length ? cfg.projects : [{
+			name: 'Project', pricing_model: cfg.pricing_model, unit_label: cfg.unit_label, min_job: cfg.min_job,
+			options_label: cfg.options_label, addons_label: cfg.addons_label,
+			dims: cfg.dims || [], options: cfg.options || [], addons: cfg.addons || []
+		}];
+		var multi = projects.length > 1;
 		var biz = cfg.business || {};
-		var unit = cfg.unit_label || 'sq ft';
-		var linear = cfg.pricing_model === 'linear';
-		var state = { opt: 0, dims: dims.map(function (d) { return Number(d.default); }), addons: {} };
+		var proj, opts, addons, dims, unit, linear;
+		var state = { proj: 0, opt: 0, dims: [], addons: {} };
+
+		function useProject(i) {
+			state.proj = i;
+			proj = projects[i];
+			opts = proj.options || [];
+			addons = proj.addons || [];
+			dims = proj.dims || [];
+			unit = proj.unit_label || 'sq ft';
+			linear = proj.pricing_model === 'linear';
+			state.opt = 0;
+			state.dims = dims.map(function (d) { return Number(d.default); });
+			state.addons = {};
+		}
+		useProject(0);
 		if (biz.accent) root.style.setProperty('--nse-accent', biz.accent);
 
 		var track = cfg.tracking || {};
@@ -62,7 +80,7 @@
 		function markStarted() {
 			if (started) return;
 			started = true;
-			push({ event: 'project_estimator_start', estimator_id: estId, estimator_name: estName });
+			push({ event: 'project_estimator_start', estimator_id: estId, estimator_name: estName, project_type: proj.name });
 		}
 		root.addEventListener('click', markStarted, { once: true });
 		root.addEventListener('input', markStarted, { once: true });
@@ -79,16 +97,19 @@
 			});
 			var r = Math.max(1, cfg.round_to || 1);
 			var rnd = function (n) { return Math.round(n / r) * r; };
+			var min = proj.min_job || 0;
 			return {
-				low: Math.max(rnd(low), cfg.min_job || 0),
-				high: Math.max(rnd(high), rnd((cfg.min_job || 0) * 1.3))
+				low: Math.max(rnd(low), min),
+				high: Math.max(rnd(high), rnd(min * 1.3))
 			};
 		}
 
-		var stepNo = 0;
 		function stepTitle(label, id) {
-			stepNo++;
-			return h('h3', { class: 'nse-step', id: id }, [h('span', { class: 'nse-n', 'aria-hidden': 'true', text: String(stepNo) }), label]);
+			return h('h3', { class: 'nse-step', id: id }, [h('span', { class: 'nse-n', 'aria-hidden': 'true' }), label]);
+		}
+		function renumber() {
+			var ns = root.querySelectorAll('.nse-n');
+			for (var i = 0; i < ns.length; i++) ns[i].textContent = String(i + 1);
 		}
 
 		/* Header */
@@ -98,39 +119,85 @@
 			cfg.intro ? h('p', { class: 'nse-intro', text: cfg.intro }) : null
 		]));
 
-		/* Step: choices */
-		var optBtns = [];
-		if (opts.length) {
-			root.appendChild(h('section', { class: 'nse-sec', 'aria-labelledby': uid + '-o' }, [
-				stepTitle(cfg.options_label, uid + '-o'),
-				h('div', { class: 'nse-options' }, opts.map(function (o, i) {
-					var b = h('button', { type: 'button', class: 'nse-opt', onclick: function () { state.opt = i; update(); } }, [
-						h('strong', { text: o.name }),
-						o.note ? h('span', { text: o.note }) : null
+		/* Step: project type (only with 2 or more) */
+		var projBtns = [];
+		if (multi) {
+			root.appendChild(h('section', { class: 'nse-sec', 'aria-labelledby': uid + '-p' }, [
+				stepTitle(cfg.project_label || 'What are you planning?', uid + '-p'),
+				h('div', { class: 'nse-options nse-projects' }, projects.map(function (p, i) {
+					var b = h('button', { type: 'button', class: 'nse-opt nse-proj', onclick: function () {
+						if (i === state.proj) return;
+						useProject(i);
+						buildProject();
+						update();
+					} }, [
+						h('strong', { text: p.name }),
+						p.note ? h('span', { text: p.note }) : null
 					]);
-					optBtns.push(b);
+					projBtns.push(b);
 					return b;
 				}))
 			]));
 		}
 
-		/* Step: measurements */
-		var svg = s('svg', { viewBox: '0 0 400 220', class: 'nse-plan', role: 'img', 'aria-label': 'Diagram of your project size' });
-		var outs = [];
-		var sliders = dims.map(function (d, i) {
-			var out = h('output', {});
-			outs.push(out);
-			var inp = h('input', {
-				type: 'range', min: d.min, max: d.max, step: d.step, value: d.default,
-				oninput: function (e) { state.dims[i] = parseFloat(e.target.value); update(); }
+		/* Project-specific steps: rebuilt when the project type changes */
+		var projBody = h('div', { class: 'nse-project-body' });
+		root.appendChild(projBody);
+		var optBtns = [], outs = [], svg, qtyEl;
+
+		function buildProject() {
+			projBody.innerHTML = '';
+			optBtns = [];
+			outs = [];
+
+			/* Choices */
+			if (opts.length) {
+				projBody.appendChild(h('section', { class: 'nse-sec', 'aria-labelledby': uid + '-o' }, [
+					stepTitle(proj.options_label || 'Choose a style', uid + '-o'),
+					h('div', { class: 'nse-options' }, opts.map(function (o, i) {
+						var b = h('button', { type: 'button', class: 'nse-opt', onclick: function () { state.opt = i; update(); } }, [
+							h('strong', { text: o.name }),
+							o.note ? h('span', { text: o.note }) : null
+						]);
+						optBtns.push(b);
+						return b;
+					}))
+				]));
+			}
+
+			/* Measurements */
+			svg = s('svg', { viewBox: '0 0 400 220', class: 'nse-plan', role: 'img', 'aria-label': 'Diagram of your project size' });
+			var sliders = dims.map(function (d, i) {
+				var out = h('output', {});
+				outs.push(out);
+				var inp = h('input', {
+					type: 'range', min: d.min, max: d.max, step: d.step, value: d.default,
+					'aria-label': d.label,
+					oninput: function (e) { state.dims[i] = parseFloat(e.target.value); update(); }
+				});
+				return h('label', { class: 'nse-range' }, [h('span', { class: 'nse-range-top' }, [h('span', { text: d.label }), out]), inp]);
 			});
-			return h('label', { class: 'nse-range' }, [h('span', { class: 'nse-range-top' }, [h('span', { text: d.label }), out]), inp]);
-		});
-		var qtyEl = h('p', { class: 'nse-qty' });
-		root.appendChild(h('section', { class: 'nse-sec', 'aria-labelledby': uid + '-m' }, [
-			stepTitle('Set the size', uid + '-m'),
-			h('div', { class: 'nse-box' }, [svg, h('div', { class: 'nse-sliders' }, sliders), qtyEl])
-		]));
+			qtyEl = h('p', { class: 'nse-qty' });
+			projBody.appendChild(h('section', { class: 'nse-sec', 'aria-labelledby': uid + '-m' }, [
+				stepTitle('Set the size', uid + '-m'),
+				h('div', { class: 'nse-box' }, [svg, h('div', { class: 'nse-sliders' }, sliders), qtyEl])
+			]));
+
+			/* Extras */
+			if (addons.length) {
+				projBody.appendChild(h('section', { class: 'nse-sec', 'aria-labelledby': uid + '-a' }, [
+					stepTitle(proj.addons_label || 'Add extras', uid + '-a'),
+					h('div', { class: 'nse-addons' }, addons.map(function (a, i) {
+						return h('label', { class: 'nse-addon' }, [
+							h('input', { type: 'checkbox', onchange: function (e) { state.addons[i] = e.target.checked; update(); } }),
+							h('span', { class: 'nse-addon-t' }, [h('span', { text: a.name }), a.note ? h('small', { text: a.note }) : null]),
+							h('span', { class: 'nse-addon-p', text: a.per_unit ? money(a.low) + ' per ' + unit : '+' + money(a.low) })
+						]);
+					}))
+				]));
+			}
+			renumber();
+		}
 
 		function drawPlan() {
 			while (svg.firstChild) svg.removeChild(svg.firstChild);
@@ -153,20 +220,6 @@
 			svg.appendChild(s('rect', { x: x, y: y, width: w, height: hh, class: 'nse-shape' }));
 			svg.appendChild(s('text', { x: x + w / 2, y: y + hh + 18, 'text-anchor': 'middle', class: 'nse-dim' }, num(state.dims[0]) + ' ft'));
 			svg.appendChild(s('text', { x: x + w + 10, y: y + hh / 2 + 4, class: 'nse-dim' }, num(state.dims[1]) + ' ft'));
-		}
-
-		/* Step: extras */
-		if (addons.length) {
-			root.appendChild(h('section', { class: 'nse-sec', 'aria-labelledby': uid + '-a' }, [
-				stepTitle(cfg.addons_label, uid + '-a'),
-				h('div', { class: 'nse-addons' }, addons.map(function (a, i) {
-					return h('label', { class: 'nse-addon' }, [
-						h('input', { type: 'checkbox', onchange: function (e) { state.addons[i] = e.target.checked; update(); } }),
-						h('span', { class: 'nse-addon-t' }, [h('span', { text: a.name }), a.note ? h('small', { text: a.note }) : null]),
-						h('span', { class: 'nse-addon-p', text: a.per_unit ? money(a.low) + ' per ' + unit : '+' + money(a.low) })
-					]);
-				}))
-			]));
 		}
 
 		/* Step: quote form */
@@ -207,6 +260,7 @@
 			cfg.disclaimer || biz.phone ? h('p', { class: 'nse-fine', text: [cfg.disclaimer, biz.phone ? 'Prefer to talk? Call ' + biz.phone + '.' : ''].filter(Boolean).join(' ') }) : null
 		]);
 		root.appendChild(quoteSec);
+		buildProject();
 
 		/* Sticky price bar */
 		var rangeEl = h('strong', {});
@@ -235,6 +289,7 @@
 				estimator_id: estId,
 				estimator_name: estName,
 				lead_id: leadId,
+				project_type: proj.name,
 				project_option: opt ? opt.name : '',
 				estimate_low: low,
 				estimate_high: high,
@@ -247,7 +302,7 @@
 			if (typeof window.gtag === 'function') {
 				if (userData) window.gtag('set', 'user_data', userData);
 				if (track.ga4) {
-					window.gtag('event', 'generate_lead', { value: value, currency: 'USD', lead_id: leadId, estimator_name: estName });
+					window.gtag('event', 'generate_lead', { value: value, currency: 'USD', lead_id: leadId, estimator_name: estName, project_type: proj.name });
 				}
 				if (track.ads_send_to) {
 					window.gtag('event', 'conversion', { send_to: track.ads_send_to, value: value, currency: 'USD', transaction_id: leadId });
@@ -256,6 +311,7 @@
 		}
 
 		function update() {
+			projBtns.forEach(function (b, i) { b.setAttribute('aria-pressed', i === state.proj ? 'true' : 'false'); });
 			optBtns.forEach(function (b, i) { b.setAttribute('aria-pressed', i === state.opt ? 'true' : 'false'); });
 			outs.forEach(function (o, i) { o.textContent = num(state.dims[i]) + ' ft'; });
 			qtyEl.textContent = num(qty()) + ' ' + unit;
@@ -286,6 +342,7 @@
 				website: hp.value,
 				name: v('name'), phone: v('phone'), email: v('email'), zip: v('zip'),
 				address: v('address'), timeline: v('timeline'), notes: v('notes'),
+				project: state.proj,
 				option: state.opt,
 				dims: state.dims,
 				addons: Object.keys(state.addons).filter(function (i) { return state.addons[i]; }).map(Number),
@@ -304,7 +361,7 @@
 					var o = opts[state.opt];
 					var picked = addons.filter(function (a, i) { return state.addons[i]; }).map(function (a) { return a.name; });
 					var list = h('ul', {}, [
-						o ? h('li', { text: o.name + ', ' + num(qty()) + ' ' + unit }) : null,
+						h('li', { text: proj.name + (o ? ': ' + o.name : '') + ', ' + num(qty()) + ' ' + unit }),
 						h('li', { text: picked.length ? 'Extras: ' + picked.join(', ') : 'No extras' }),
 						res.j.low ? h('li', { text: 'Estimate: ' + money(res.j.low) + ' to ' + money(res.j.high) }) : null
 					]);

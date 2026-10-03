@@ -24,3 +24,12 @@
 #nse-editor .nse-check { display: flex; gap: 8px; align-items: flex-start; }
 #nse-editor .nse-check input { margin-top: 2px; }
 #nse-editor .nse-check em { display: block; font-size: 12px; color: #646970; font-style: normal; }
+#nse-editor .nse-card h4 { margin: 18px 0 6px; font-size: 13px; }
+#nse-editor .nse-tabs { display: flex; flex-wrap: wrap; gap: 4px; border-bottom: 1px solid #dcdcde; margin-bottom: 0; }
+#nse-editor .nse-tab { background: #f6f7f7; border: 1px solid #dcdcde; border-bottom: 0; border-radius: 4px 4px 0 0; padding: 7px 14px; cursor: pointer; font-weight: 600; color: #50575e; margin-bottom: -1px; }
+#nse-editor .nse-tab.is-active { background: #fff; color: #1d2327; border-bottom: 1px solid #fff; }
+#nse-editor .nse-panel { border: 1px solid #dcdcde; border-top: 0; padding: 14px; border-radius: 0 0 4px 4px; }
+#nse-editor .nse-ptools { justify-content: flex-end; margin-bottom: 12px; }
+#nse-editor .nse-ptools .nse-del { margin-left: 8px; }
+#nse-editor .nse-adder { margin-top: 14px; }
+#nse-editor button[disabled] { opacity: .5; cursor: default; }

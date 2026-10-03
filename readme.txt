@@ -2,7 +2,7 @@
 Contributors: novoslate
 Requires at least: 6.0
 Requires PHP: 7.4
-Stable tag: 1.1.0
+Stable tag: 1.2.0
 License: GPLv2 or later
 
 Instant price estimators with lead capture for contractors.
@@ -10,7 +10,9 @@ Instant price estimators with lead capture for contractors.
 == Description ==
 Visitors pick an option, set their size with sliders, add extras, and see a live price range. The quote form sends the lead with every project detail attached.
 
-Templates: patio covers, landscaping, artificial turf, pavers, fencing, and a blank starter.
+Each estimator holds one or more project types (for example patio cover, pergola, sunroom, patio enclosure). Every project type has its own sizes, choices, extras, and minimum job. With two or more, visitors pick a project type first.
+
+Templates: outdoor living (patio covers, pergolas, sunrooms, enclosures), yard (landscaping, turf, pavers), single-project templates for each, and a blank starter. Any project type can also be added to an estimator from the built-in library.
 
 Leads are:
 * Saved under Estimators > Leads
@@ -33,7 +35,7 @@ Leads are:
 Every quote request pushes an event to window.dataLayer for Google Tag Manager:
 
   event: project_estimator_lead (editable per estimator)
-  estimator_id, estimator_name, lead_id, project_option,
+  estimator_id, estimator_name, lead_id, project_type, project_option,
   estimate_low, estimate_high, value, currency
   user_data { email, phone_number } when Enhanced conversions is on
 
@@ -52,6 +54,12 @@ Suggested Google Ads tracking template:
 Disable capture with: add_filter( 'pe_capture_attribution', '__return_false' );
 
 == Changelog ==
+= 1.2.0 =
+* Project types: one estimator can offer several project types, each with its own pricing.
+* New templates: Outdoor living and Yard. Project library for adding types to any estimator.
+* Project type included in leads, emails, the dataLayer, and GA4 events.
+* Estimators from 1.1.0 migrate automatically.
+
 = 1.1.0 =
 * Conversion tracking: dataLayer events, optional GA4 and Google Ads gtag events, enhanced conversions.
 * Lead attribution: GCLID, UTM, and ValueTrack capture with a Source column on leads.

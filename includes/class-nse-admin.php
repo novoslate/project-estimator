@@ -121,6 +121,7 @@ class NSE_Admin {
 			'NSE_ADMIN',
 			array(
 				'templates'  => $templates,
+				'library'    => NSE_Templates::library(),
 				'config'     => $saved,
 				'defaults'   => NSE_Config::defaults(),
 				'adminEmail' => get_option( 'admin_email' ),

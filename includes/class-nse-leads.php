@@ -160,32 +160,36 @@ class NSE_Leads {
 		}
 
 		// Recompute the estimate on the server so the stored range can't be tampered with.
+		$pi   = isset( $p['project'] ) ? absint( $p['project'] ) : 0;
+		$pi   = isset( $c['projects'][ $pi ] ) ? $pi : 0;
+		$proj = $c['projects'][ $pi ];
 		$opt  = isset( $p['option'] ) ? absint( $p['option'] ) : 0;
-		$opt  = isset( $c['options'][ $opt ] ) ? $opt : 0;
+		$opt  = isset( $proj['options'][ $opt ] ) ? $opt : 0;
 		$dims = array();
-		foreach ( $c['dims'] as $i => $d ) {
+		foreach ( $proj['dims'] as $i => $d ) {
 			$v      = isset( $p['dims'][ $i ] ) ? (float) $p['dims'][ $i ] : $d['default'];
 			$dims[] = min( max( $v, $d['min'] ), $d['max'] );
 		}
 		$addon_ids = array();
 		foreach ( (array) ( isset( $p['addons'] ) ? $p['addons'] : array() ) as $a ) {
 			$a = absint( $a );
-			if ( isset( $c['addons'][ $a ] ) ) {
+			if ( isset( $proj['addons'][ $a ] ) ) {
 				$addon_ids[] = $a;
 			}
 		}
 		$addon_ids = array_values( array_unique( $addon_ids ) );
-		$est       = NSE_Config::estimate( $c, $opt, $dims, $addon_ids );
+		$est       = NSE_Config::estimate( $c, $pi, $opt, $dims, $addon_ids );
 
 		$lead += array(
 			'estimator'     => get_the_title( $post ),
 			'estimator_id'  => $id,
-			'option'        => isset( $c['options'][ $opt ] ) ? $c['options'][ $opt ]['name'] : '',
-			'measurements'  => self::measurements( $c, $dims ),
-			'quantity'      => $est['qty'] . ' ' . $c['unit_label'],
+			'project'       => $proj['name'],
+			'option'        => isset( $proj['options'][ $opt ] ) ? $proj['options'][ $opt ]['name'] : '',
+			'measurements'  => self::measurements( $proj, $dims ),
+			'quantity'      => $est['qty'] . ' ' . $proj['unit_label'],
 			'extras'        => array_map(
-				function ( $i ) use ( $c ) {
-					return $c['addons'][ $i ]['name'];
+				function ( $i ) use ( $proj ) {
+					return $proj['addons'][ $i ]['name'];
 				},
 				$addon_ids
 			),
@@ -259,6 +263,7 @@ class NSE_Leads {
 			}
 		}
 		$lines[] = '';
+		$lines[] = 'Project: ' . $lead['project'];
 		$lines[] = 'Choice: ' . $lead['option'];
 		$lines[] = 'Size: ' . $lead['measurements'] . ' (' . $lead['quantity'] . ')';
 		$lines[] = 'Extras: ' . ( $lead['extras'] ? implode( ', ', $lead['extras'] ) : 'None' );
@@ -276,7 +281,7 @@ class NSE_Leads {
 		if ( $lead['email'] ) {
 			$headers[] = 'Reply-To: ' . $lead['name'] . ' <' . $lead['email'] . '>';
 		}
-		wp_mail( $to, 'New quote request: ' . $lead['name'], implode( "\n", $lines ), $headers );
+		wp_mail( $to, 'New ' . strtolower( $lead['project'] ) . ' quote request: ' . $lead['name'], implode( "\n", $lines ), $headers );
 
 		if ( $c['business']['webhook_url'] ) {
 			wp_remote_post(
@@ -343,6 +348,7 @@ class NSE_Leads {
 			'Timeline'       => $lead['timeline'],
 			'Notes'          => $lead['notes'],
 			'Estimator'      => $lead['estimator'],
+			'Project'        => isset( $lead['project'] ) ? $lead['project'] : '',
 			'Choice'         => $lead['option'],
 			'Size'           => $lead['measurements'] . ' (' . $lead['quantity'] . ')',
 			'Extras'         => $lead['extras'] ? implode( ', ', $lead['extras'] ) : 'None',
@@ -367,7 +373,7 @@ class NSE_Leads {
 			'cb'           => isset( $cols['cb'] ) ? $cols['cb'] : '',
 			'title'        => 'Lead',
 			'nse_phone'    => 'Phone',
-			'nse_choice'   => 'Choice',
+			'nse_choice'   => 'Project',
 			'nse_estimate' => 'Estimate',
 			'nse_source'   => 'Source',
 			'date'         => 'Date',
@@ -382,7 +388,8 @@ class NSE_Leads {
 		if ( 'nse_phone' === $col ) {
 			printf( '<a href="tel:%s">%s</a>', esc_attr( preg_replace( '/[^\d+]/', '', $lead['phone'] ) ), esc_html( $lead['phone'] ) );
 		} elseif ( 'nse_choice' === $col ) {
-			echo esc_html( $lead['option'] . ', ' . $lead['quantity'] );
+			$proj = isset( $lead['project'] ) ? $lead['project'] . ': ' : '';
+			echo esc_html( $proj . $lead['option'] . ', ' . $lead['quantity'] );
 		} elseif ( 'nse_source' === $col ) {
 			echo esc_html( isset( $lead['source'] ) ? $lead['source'] : 'Unknown' );
 		} elseif ( 'nse_estimate' === $col ) {
