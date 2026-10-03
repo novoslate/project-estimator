@@ -1,20 +1,28 @@
 /* Project Estimator. Scoped under .nse so theme styles stay out. */
 .nse {
+	/* Defaults. Each estimator overrides these inline from its design settings. */
 	--nse-accent: #1E3A3F;
+	--nse-on-accent: #FFFFFF;
 	--nse-ink: #1D2B2E;
 	--nse-muted: #5D6F72;
+	--nse-bg: #FFFFFF;
 	--nse-line: #D5DCDB;
 	--nse-soft: #F3F5F4;
 	--nse-ground: #ECE7DB;
+	--nse-radius: 14px;
+	--nse-inner: calc(var(--nse-radius) * .72);
+	--nse-maxw: 760px;
+	--nse-font: inherit;
 	position: relative;
-	max-width: 760px;
+	max-width: var(--nse-maxw);
 	margin: 0 auto;
 	padding: 24px 22px 0;
-	background: #fff;
+	background: var(--nse-bg);
 	color: var(--nse-ink);
 	border: 1px solid var(--nse-line);
-	border-radius: 14px;
-	font: inherit;
+	border-radius: var(--nse-radius);
+	font-family: var(--nse-font);
+	font-size: inherit;
 	line-height: 1.5;
 	text-align: left;
 }
@@ -25,25 +33,25 @@
 .nse-intro { margin: 0; color: var(--nse-muted); max-width: 56ch; }
 .nse-sec { margin-top: 30px; }
 .nse .nse-step { display: flex; align-items: center; gap: 10px; margin: 0 0 12px; font-size: 1.1rem; line-height: 1.3; color: var(--nse-ink); }
-.nse-n { flex: none; width: 26px; height: 26px; border-radius: 50%; background: var(--nse-accent); color: #fff; font-size: .8rem; font-weight: 700; display: inline-flex; align-items: center; justify-content: center; }
+.nse-n { flex: none; width: 26px; height: 26px; border-radius: 50%; background: var(--nse-accent); color: var(--nse-on-accent); font-size: .8rem; font-weight: 700; display: inline-flex; align-items: center; justify-content: center; }
 
 .nse-options { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 10px; }
-.nse button.nse-opt { all: unset; box-sizing: border-box; cursor: pointer; display: flex; flex-direction: column; gap: 4px; padding: 14px; border: 2px solid var(--nse-line); border-radius: 10px; background: #fff; color: var(--nse-ink); font: inherit; line-height: 1.3; }
+.nse button.nse-opt { all: unset; box-sizing: border-box; cursor: pointer; display: flex; flex-direction: column; gap: 4px; padding: 14px; border: 2px solid var(--nse-line); border-radius: var(--nse-inner); background: var(--nse-bg); color: var(--nse-ink); font: inherit; line-height: 1.3; }
 .nse button.nse-opt strong { font-weight: 600; }
 .nse button.nse-opt span { font-size: .85em; color: var(--nse-muted); }
 .nse button.nse-opt[aria-pressed="true"] { border-color: var(--nse-accent); box-shadow: inset 0 0 0 1px var(--nse-accent); background: var(--nse-soft); }
 
 .nse-colors { display: flex; flex-wrap: wrap; gap: 8px; }
-.nse button.nse-color { all: unset; box-sizing: border-box; cursor: pointer; display: flex; align-items: center; gap: 10px; padding: 8px 14px 8px 8px; border: 2px solid var(--nse-line); border-radius: 999px; background: #fff; color: var(--nse-ink); font: inherit; font-size: .92em; line-height: 1.2; }
+.nse button.nse-color { all: unset; box-sizing: border-box; cursor: pointer; display: flex; align-items: center; gap: 10px; padding: 8px 14px 8px 8px; border: 2px solid var(--nse-line); border-radius: 999px; background: var(--nse-bg); color: var(--nse-ink); font: inherit; font-size: .92em; line-height: 1.2; }
 .nse button.nse-color[aria-pressed="true"] { border-color: var(--nse-accent); box-shadow: inset 0 0 0 1px var(--nse-accent); background: var(--nse-soft); }
 .nse-swatch { flex: none; width: 26px; height: 26px; border-radius: 50%; border: 1px solid rgba(0, 0, 0, .18); box-shadow: inset 0 -3px 6px rgba(0, 0, 0, .12); }
 .nse-color-t small { display: block; font-size: .78em; color: var(--nse-muted); }
-.nse-box { border: 1px solid var(--nse-line); border-radius: 10px; padding: 14px; background: #fff; }
+.nse-box { border: 1px solid var(--nse-line); border-radius: var(--nse-inner); padding: 14px; background: var(--nse-bg); }
 .nse-visual { position: relative; }
-.nse-plan { display: block; width: 100%; height: auto; border-radius: 6px; background: #E7E0CF; }
+.nse-plan { display: block; width: 100%; height: auto; border-radius: calc(var(--nse-inner) * .6); background: #E7E0CF; }
 .nse-views { position: absolute; top: 8px; right: 8px; display: flex; background: rgba(255, 255, 255, .92); border: 1px solid var(--nse-line); border-radius: 8px; padding: 2px; }
 .nse button.nse-view { all: unset; cursor: pointer; font: inherit; font-size: .78rem; font-weight: 600; padding: 5px 10px; border-radius: 6px; color: var(--nse-muted); }
-.nse button.nse-view[aria-pressed="true"] { background: var(--nse-accent); color: #fff; }
+.nse button.nse-view[aria-pressed="true"] { background: var(--nse-accent); color: var(--nse-on-accent); }
 .nse-chips { margin: 10px 0 0; font-size: .85em; color: var(--nse-ink); }
 .nse-caption { margin: 6px 0 0; font-size: .75em; color: var(--nse-muted); }
 .nse-plan .nse-ground { fill: var(--nse-ground); }
@@ -59,7 +67,7 @@
 .nse-qty { margin: 10px 0 0; font-size: .9em; color: var(--nse-muted); }
 
 .nse-addons { display: grid; gap: 8px; }
-.nse-addon { display: flex; align-items: center; gap: 12px; padding: 12px 14px; border: 1px solid var(--nse-line); border-radius: 10px; cursor: pointer; margin: 0; }
+.nse-addon { display: flex; align-items: center; gap: 12px; padding: 12px 14px; border: 1px solid var(--nse-line); border-radius: var(--nse-inner); cursor: pointer; margin: 0; }
 .nse-addon input { flex: none; width: 20px; height: 20px; margin: 0; accent-color: var(--nse-accent); }
 .nse-addon-t { flex: 1; line-height: 1.3; }
 .nse-addon-t small { display: block; font-size: .82em; color: var(--nse-muted); }
@@ -68,28 +76,36 @@
 .nse-form { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin: 0; }
 .nse-full { grid-column: 1 / -1; }
 .nse-field label { display: block; font-size: .85em; color: var(--nse-muted); margin: 0 0 4px; }
-.nse-field input, .nse-field select, .nse-field textarea { display: block; width: 100%; max-width: none; margin: 0; padding: 11px 12px; font: inherit; color: var(--nse-ink); background: #fff; border: 1px solid var(--nse-line); border-radius: 8px; box-shadow: none; }
+.nse-field input, .nse-field select, .nse-field textarea { display: block; width: 100%; max-width: none; margin: 0; padding: 11px 12px; font: inherit; color: var(--nse-ink); background: var(--nse-bg); border: 1px solid var(--nse-line); border-radius: calc(var(--nse-inner) * .8); box-shadow: none; }
 .nse-hp { position: absolute; left: -9999px; width: 1px; height: 1px; overflow: hidden; }
 .nse-err { grid-column: 1 / -1; margin: 0; min-height: 1.2em; color: #B42318; font-size: .9em; }
-.nse button.nse-btn { all: unset; box-sizing: border-box; display: block; width: 100%; text-align: center; cursor: pointer; padding: 14px 18px; border-radius: 10px; background: var(--nse-accent); color: #fff; font: inherit; font-weight: 600; }
+.nse button.nse-btn { all: unset; box-sizing: border-box; display: block; width: 100%; text-align: center; cursor: pointer; padding: 14px 18px; border-radius: var(--nse-inner); background: var(--nse-accent); color: var(--nse-on-accent); font: inherit; font-weight: 600; }
 .nse button.nse-btn[disabled] { opacity: .6; cursor: wait; }
-.nse-done { padding: 18px; border: 1px solid var(--nse-line); border-radius: 10px; background: var(--nse-soft); }
+.nse-done { padding: 18px; border: 1px solid var(--nse-line); border-radius: var(--nse-inner); background: var(--nse-soft); }
 .nse .nse-done h4 { margin: 0 0 6px; font-size: 1.15rem; color: var(--nse-ink); }
 .nse-done p { margin: 0; }
 .nse-done ul { margin: 10px 0 0; padding-left: 18px; color: var(--nse-muted); }
 .nse-fine { margin: 12px 0 0; font-size: .8em; color: var(--nse-muted); }
 
-.nse-bar { position: sticky; bottom: 0; z-index: 5; display: flex; align-items: center; justify-content: space-between; gap: 12px; margin: 26px -22px 0; padding: 12px 22px; padding-bottom: calc(12px + env(safe-area-inset-bottom, 0px)); background: var(--nse-accent); color: #fff; border-radius: 0 0 13px 13px; }
+.nse-bar { position: sticky; bottom: 0; z-index: 5; display: flex; align-items: center; justify-content: space-between; gap: 12px; margin: 26px -22px 0; padding: 12px 22px; padding-bottom: calc(12px + env(safe-area-inset-bottom, 0px)); background: var(--nse-accent); color: var(--nse-on-accent); border-radius: 0 0 calc(var(--nse-radius) - 1px) calc(var(--nse-radius) - 1px); }
 .nse-bar small { display: block; font-size: .8em; opacity: .8; }
 .nse-bar strong { font-size: 1.3rem; font-weight: 800; font-variant-numeric: tabular-nums; }
-.nse button.nse-bar-btn { all: unset; cursor: pointer; font: inherit; font-weight: 600; font-size: .9em; padding: 9px 14px; border: 1px solid rgba(255, 255, 255, .55); border-radius: 8px; color: #fff; white-space: nowrap; }
+.nse button.nse-bar-btn { all: unset; cursor: pointer; font: inherit; font-weight: 600; font-size: .9em; padding: 9px 14px; border: 1px solid currentColor; border-radius: calc(var(--nse-inner) * .7); color: var(--nse-on-accent); white-space: nowrap; opacity: .92; }
 
 .nse button:focus-visible, .nse input:focus-visible, .nse select:focus-visible, .nse textarea:focus-visible, .nse-addon:focus-within { outline: 3px solid #F2B43A; outline-offset: 2px; }
 
 @media (max-width: 520px) {
-	.nse { padding: 18px 16px 0; border-radius: 12px; }
+	.nse { padding: 18px 16px 0; }
+	.nse.nse--flat { padding: 0; }
 	.nse-form { grid-template-columns: 1fr; }
 	.nse-bar { margin: 22px -16px 0; padding-left: 16px; padding-right: 16px; }
 	.nse-bar strong { font-size: 1.1rem; }
 }
 @media (prefers-reduced-motion: reduce) { .nse * { transition: none !important; scroll-behavior: auto !important; } }
+
+/* Design variants */
+.nse.nse--shadow { border-color: transparent; box-shadow: 0 1px 2px rgba(0, 0, 0, .06), 0 8px 28px rgba(0, 0, 0, .09); }
+.nse.nse--flat { border: 0; background: transparent; padding: 0; border-radius: 0; }
+.nse.nse--flat .nse-bar, .nse.nse--flat .nse-bar:last-child { margin-left: 0; margin-right: 0; border-radius: var(--nse-inner); }
+.nse.nse--no-steps .nse-n { display: none; }
+.nse.nse--static-bar .nse-bar { position: static; }

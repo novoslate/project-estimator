@@ -2,7 +2,7 @@
 Contributors: novoslate
 Requires at least: 6.0
 Requires PHP: 7.4
-Stable tag: 1.4.0
+Stable tag: 1.5.0
 License: GPLv2 or later
 
 Instant price estimators with lead capture for contractors.
@@ -30,6 +30,14 @@ Leads are:
 * The server recalculates every estimate, so tampered prices are never stored.
 * Spam protection: honeypot field, minimum fill time, and a per-visitor rate limit.
 * Use an SMTP plugin on the client site so lead emails actually get delivered.
+
+== Settings ==
+Estimators > Settings holds defaults for every estimator:
+
+* Lead email defaults: send to, CC, and BCC. An estimator's own fields win when filled in; blank fields use these defaults. Separate multiple addresses with commas.
+* Design defaults: style (card, soft shadow, or flat), accent, text, secondary text, background, and border colors, font, corners, max width, and whether to show the business name, step numbers, and a sticky price bar. Text on the accent color switches between white and dark automatically for readability.
+
+Each estimator has a Design card set to "Use global design settings" by default. Switch it to custom to style one estimator differently.
 
 == Live preview ==
 Each project type shows a live 3D-style illustration that updates as visitors change the style, size, and extras. Visitors can switch to a top-down view.
@@ -66,6 +74,12 @@ Suggested Google Ads tracking template:
 Disable capture with: add_filter( 'pe_capture_attribution', '__return_false' );
 
 == Changelog ==
+= 1.5.0 =
+* CC and BCC for lead emails, plus multiple "send to" addresses.
+* New Estimators > Settings page with lead email and design defaults.
+* Design settings per estimator, with the option to use the global defaults.
+* Estimators with a customized accent color keep it as a custom design.
+
 = 1.4.0 =
 * Colors per project type with swatches, optional upcharge %, and live preview repainting.
 * Default color lists for every template scene.

@@ -46,9 +46,12 @@ class NSE_Frontend {
 		wp_enqueue_script( 'nse-estimator' );
 
 		$config = NSE_Config::public_config( NSE_Config::get( $id ) );
+		$design = $config['design'];
 
 		return sprintf(
-			'<div class="nse" data-id="%d" data-name="%s" data-ts="%d" data-endpoint="%s" data-config="%s"><noscript>Turn on JavaScript to use the price estimator.</noscript></div>',
+			'<div class="%s" style="%s" data-id="%d" data-name="%s" data-ts="%d" data-endpoint="%s" data-config="%s"><noscript>Turn on JavaScript to use the price estimator.</noscript></div>',
+			esc_attr( NSE_Settings::css_classes( $design ) ),
+			esc_attr( NSE_Settings::css_vars( $design ) ),
 			$id,
 			esc_attr( get_the_title( $post ) ),
 			time(),

@@ -34,3 +34,5 @@
 #nse-editor .nse-adder { margin-top: 14px; }
 #nse-editor button[disabled] { opacity: .5; cursor: default; }
 #nse-editor .nse-table input[type=color] { width: 44px; height: 30px; padding: 2px; cursor: pointer; }
+#nse-editor .nse-modes { gap: 18px; margin-bottom: 12px; }
+#nse-editor .nse-modes label { display: flex; gap: 6px; align-items: center; font-weight: 600; }

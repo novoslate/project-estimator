@@ -73,7 +73,6 @@
 			state.addons = {};
 		}
 		useProject(0);
-		if (biz.accent) root.style.setProperty('--nse-accent', biz.accent);
 
 		var track = cfg.tracking || {};
 		var estId = Number(root.getAttribute('data-id'));
@@ -118,7 +117,7 @@
 
 		/* Header */
 		root.appendChild(h('div', { class: 'nse-head' }, [
-			biz.name ? h('div', { class: 'nse-biz', text: biz.name }) : null,
+			biz.name && (!cfg.design || cfg.design.show_business_name !== false) ? h('div', { class: 'nse-biz', text: biz.name }) : null,
 			h('h2', { class: 'nse-title', text: cfg.headline }),
 			cfg.intro ? h('p', { class: 'nse-intro', text: cfg.intro }) : null
 		]));

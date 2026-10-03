@@ -14,14 +14,17 @@ class NSE_Config {
 
 	public static function defaults() {
 		$c             = NSE_Templates::get( 'patio' );
-		$c['business'] = array(
+		$c['business']    = array(
 			'name'         => get_bloginfo( 'name' ),
 			'phone'        => '',
 			'notify_email' => '',
+			'cc'           => '',
+			'bcc'          => '',
 			'webhook_url'  => '',
-			'accent'       => '#1E3A3F',
 		);
-		$c['tracking'] = self::tracking_defaults();
+		$c['tracking']    = self::tracking_defaults();
+		$c['design_mode'] = 'global';
+		$c['design']      = NSE_Settings::design_defaults();
 		return $c;
 	}
 
@@ -48,7 +51,9 @@ class NSE_Config {
 	 * Config safe to print in page HTML (no lead routing details).
 	 */
 	public static function public_config( array $c ) {
-		unset( $c['business']['notify_email'], $c['business']['webhook_url'] );
+		unset( $c['business']['notify_email'], $c['business']['cc'], $c['business']['bcc'], $c['business']['webhook_url'] );
+		$c['design'] = NSE_Settings::resolve_design( $c );
+		unset( $c['design_mode'] );
 		return $c;
 	}
 
@@ -83,14 +88,26 @@ class NSE_Config {
 
 		// Business.
 		$b               = self::list_of( $c, 'business' );
-		$accent          = isset( $b['accent'] ) ? sanitize_hex_color( $b['accent'] ) : '';
 		$out['business'] = array(
 			'name'         => self::text( $b, 'name', get_bloginfo( 'name' ) ),
 			'phone'        => self::text( $b, 'phone' ),
-			'notify_email' => isset( $b['notify_email'] ) ? sanitize_email( $b['notify_email'] ) : '',
+			'notify_email' => isset( $b['notify_email'] ) ? NSE_Settings::sanitize_emails( $b['notify_email'] ) : '',
+			'cc'           => isset( $b['cc'] ) ? NSE_Settings::sanitize_emails( $b['cc'] ) : '',
+			'bcc'          => isset( $b['bcc'] ) ? NSE_Settings::sanitize_emails( $b['bcc'] ) : '',
 			'webhook_url'  => isset( $b['webhook_url'] ) ? esc_url_raw( $b['webhook_url'], array( 'https', 'http' ) ) : '',
-			'accent'       => $accent ? $accent : '#1E3A3F',
 		);
+
+		// Design. Estimators saved before 1.5.0 had only an accent color in the business section:
+		// a customized accent becomes a custom design, otherwise the estimator uses global settings.
+		if ( isset( $c['design_mode'] ) ) {
+			$out['design_mode'] = 'custom' === $c['design_mode'] ? 'custom' : 'global';
+			$out['design']      = NSE_Settings::sanitize_design( self::list_of( $c, 'design' ) );
+		} else {
+			$legacy             = isset( $b['accent'] ) ? sanitize_hex_color( $b['accent'] ) : '';
+			$custom             = $legacy && strtoupper( $legacy ) !== '#1E3A3F';
+			$out['design_mode'] = $custom ? 'custom' : 'global';
+			$out['design']      = NSE_Settings::sanitize_design( $custom ? array( 'accent' => $legacy ) : array() );
+		}
 
 		// Project types. Configs saved before 1.2.0 kept one project at the top level.
 		$raw_projects = self::list_of( $c, 'projects' );

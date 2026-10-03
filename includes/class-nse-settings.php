@@ -1,0 +1,362 @@
+<?php
+/**
+ * Global settings (Estimators > Settings): lead email defaults and design defaults.
+ * Also resolves each estimator's design into CSS variables and classes.
+ */
+
+if ( ! defined( 'ABSPATH' ) ) {
+	exit;
+}
+
+class NSE_Settings {
+
+	const OPTION = 'pe_settings';
+
+	public static function init() {
+		add_action( 'admin_menu', array( __CLASS__, 'menu' ) );
+		add_action( 'admin_init', array( __CLASS__, 'register' ) );
+		add_action( 'admin_enqueue_scripts', array( __CLASS__, 'assets' ) );
+	}
+
+	/* ---------- Defaults and access ---------- */
+
+	public static function design_defaults() {
+		return array(
+			'style'              => 'card',
+			'accent'             => '#1E3A3F',
+			'text'               => '#1D2B2E',
+			'muted'              => '#5D6F72',
+			'background'         => '#FFFFFF',
+			'border'             => '#D5DCDB',
+			'font'               => 'inherit',
+			'radius'             => 14,
+			'max_width'          => 760,
+			'show_business_name' => true,
+			'show_step_numbers'  => true,
+			'sticky_bar'         => true,
+		);
+	}
+
+	public static function defaults() {
+		return array(
+			'notify_email' => '',
+			'cc'           => '',
+			'bcc'          => '',
+			'design'       => self::design_defaults(),
+		);
+	}
+
+	public static function get() {
+		$raw = get_option( self::OPTION, array() );
+		return self::sanitize( is_array( $raw ) ? $raw : array() );
+	}
+
+	public static function choices() {
+		return array(
+			'style'  => array(
+				'card'   => 'Card (border)',
+				'shadow' => 'Card (soft shadow)',
+				'flat'   => 'Flat (blends into the page)',
+			),
+			'font'   => array(
+				'inherit' => 'Match the theme',
+				'system'  => 'System sans-serif',
+				'serif'   => 'Serif',
+				'rounded' => 'Rounded',
+			),
+			'radius' => array(
+				'2'  => 'Square',
+				'8'  => 'Slightly rounded',
+				'14' => 'Rounded',
+				'22' => 'Extra rounded',
+			),
+		);
+	}
+
+	/* ---------- Sanitizing ---------- */
+
+	/**
+	 * Comma-separated list of valid emails, up to 10.
+	 */
+	public static function sanitize_emails( $raw ) {
+		$parts = preg_split( '/[\s,;]+/', (string) $raw );
+		$out   = array();
+		foreach ( (array) $parts as $p ) {
+			$e = sanitize_email( $p );
+			if ( $e && is_email( $e ) && ! in_array( $e, $out, true ) ) {
+				$out[] = $e;
+			}
+		}
+		return implode( ', ', array_slice( $out, 0, 10 ) );
+	}
+
+	public static function sanitize_design( $d ) {
+		$d   = is_array( $d ) ? $d : array();
+		$def = self::design_defaults();
+		$ch  = self::choices();
+		$out = array();
+
+		foreach ( array( 'accent', 'text', 'muted', 'background', 'border' ) as $k ) {
+			$hex       = isset( $d[ $k ] ) ? sanitize_hex_color( $d[ $k ] ) : '';
+			$out[ $k ] = $hex ? $hex : $def[ $k ];
+		}
+		$out['style']     = ( isset( $d['style'] ) && isset( $ch['style'][ $d['style'] ] ) ) ? $d['style'] : $def['style'];
+		$out['font']      = ( isset( $d['font'] ) && isset( $ch['font'][ $d['font'] ] ) ) ? $d['font'] : $def['font'];
+		$out['radius']    = isset( $d['radius'] ) ? max( 0, min( 30, (int) $d['radius'] ) ) : $def['radius'];
+		$out['max_width'] = isset( $d['max_width'] ) ? max( 320, min( 1600, (int) $d['max_width'] ) ) : $def['max_width'];
+		foreach ( array( 'show_business_name', 'show_step_numbers', 'sticky_bar' ) as $k ) {
+			$out[ $k ] = isset( $d[ $k ] ) ? (bool) $d[ $k ] : $def[ $k ];
+		}
+		return $out;
+	}
+
+	public static function sanitize( $in ) {
+		$in = is_array( $in ) ? $in : array();
+		return array(
+			'notify_email' => isset( $in['notify_email'] ) ? self::sanitize_emails( $in['notify_email'] ) : '',
+			'cc'           => isset( $in['cc'] ) ? self::sanitize_emails( $in['cc'] ) : '',
+			'bcc'          => isset( $in['bcc'] ) ? self::sanitize_emails( $in['bcc'] ) : '',
+			'design'       => self::sanitize_design( isset( $in['design'] ) ? $in['design'] : array() ),
+		);
+	}
+
+	/**
+	 * Settings API callback. Checkboxes are absent from POST when unchecked.
+	 */
+	public static function sanitize_option( $in ) {
+		if ( isset( $_POST['pe_reset_defaults'] ) ) { // phpcs:ignore WordPress.Security.NonceVerification.Missing -- options.php verifies the nonce.
+			add_settings_error( self::OPTION, 'pe_reset', 'Settings reset to defaults.', 'updated' );
+			return self::defaults();
+		}
+		$in = is_array( $in ) ? $in : array();
+		if ( isset( $in['design'] ) && is_array( $in['design'] ) ) {
+			foreach ( array( 'show_business_name', 'show_step_numbers', 'sticky_bar' ) as $k ) {
+				$in['design'][ $k ] = ! empty( $in['design'][ $k ] );
+			}
+		}
+		return self::sanitize( $in );
+	}
+
+	/* ---------- Resolving for an estimator ---------- */
+
+	/**
+	 * Lead recipients for an estimator. Blank estimator fields fall back to global settings.
+	 *
+	 * @return array{to:string,cc:string[],bcc:string[]}
+	 */
+	public static function recipients( array $c ) {
+		$g    = self::get();
+		$b    = $c['business'];
+		$to   = $b['notify_email'] ? $b['notify_email'] : ( $g['notify_email'] ? $g['notify_email'] : get_option( 'admin_email' ) );
+		$cc   = '' !== $b['cc'] ? $b['cc'] : $g['cc'];
+		$bcc  = '' !== $b['bcc'] ? $b['bcc'] : $g['bcc'];
+		$list = function ( $s ) {
+			return array_values( array_filter( array_map( 'trim', explode( ',', (string) $s ) ) ) );
+		};
+		return array(
+			'to'  => $list( $to ),
+			'cc'  => $list( $cc ),
+			'bcc' => $list( $bcc ),
+		);
+	}
+
+	public static function resolve_design( array $c ) {
+		if ( isset( $c['design_mode'] ) && 'custom' === $c['design_mode'] && ! empty( $c['design'] ) ) {
+			return self::sanitize_design( $c['design'] );
+		}
+		$g = self::get();
+		return $g['design'];
+	}
+
+	private static function rgb( $hex ) {
+		$n = hexdec( ltrim( $hex, '#' ) );
+		return array( ( $n >> 16 ) & 255, ( $n >> 8 ) & 255, $n & 255 );
+	}
+
+	/**
+	 * Blend two hex colors. $t = 0 returns $a, 1 returns $b.
+	 */
+	public static function mix( $a, $b, $t ) {
+		$x = self::rgb( $a );
+		$y = self::rgb( $b );
+		$r = array();
+		for ( $i = 0; $i < 3; $i++ ) {
+			$r[] = (int) round( $x[ $i ] + ( $y[ $i ] - $x[ $i ] ) * $t );
+		}
+		return sprintf( '#%02X%02X%02X', $r[0], $r[1], $r[2] );
+	}
+
+	/**
+	 * Readable text color (white or near-black) on top of a background color.
+	 */
+	public static function on_color( $hex ) {
+		list( $r, $g, $b ) = self::rgb( $hex );
+		$lum               = ( 0.2126 * $r + 0.7152 * $g + 0.0722 * $b ) / 255;
+		return $lum > 0.6 ? '#1D2B2E' : '#FFFFFF';
+	}
+
+	public static function font_stack( $font ) {
+		$stacks = array(
+			'inherit' => 'inherit',
+			'system'  => 'system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif',
+			'serif'   => 'Georgia, "Times New Roman", serif',
+			'rounded' => 'ui-rounded, "SF Pro Rounded", "Nunito", "Varela Round", system-ui, sans-serif',
+		);
+		return isset( $stacks[ $font ] ) ? $stacks[ $font ] : 'inherit';
+	}
+
+	/**
+	 * Inline CSS variables for the estimator wrapper.
+	 */
+	public static function css_vars( array $d ) {
+		$vars = array(
+			'--nse-accent'    => $d['accent'],
+			'--nse-on-accent' => self::on_color( $d['accent'] ),
+			'--nse-ink'       => $d['text'],
+			'--nse-muted'     => $d['muted'],
+			'--nse-bg'        => $d['background'],
+			'--nse-line'      => $d['border'],
+			'--nse-soft'      => self::mix( $d['background'], $d['accent'], 0.07 ),
+			'--nse-radius'    => (int) $d['radius'] . 'px',
+			'--nse-maxw'      => (int) $d['max_width'] . 'px',
+			'--nse-font'      => self::font_stack( $d['font'] ),
+		);
+		$css = '';
+		foreach ( $vars as $k => $v ) {
+			$css .= $k . ':' . $v . ';';
+		}
+		return $css;
+	}
+
+	public static function css_classes( array $d ) {
+		$cls = array( 'nse', 'nse--' . $d['style'] );
+		if ( ! $d['show_step_numbers'] ) {
+			$cls[] = 'nse--no-steps';
+		}
+		if ( ! $d['sticky_bar'] ) {
+			$cls[] = 'nse--static-bar';
+		}
+		return implode( ' ', $cls );
+	}
+
+	/* ---------- Admin page ---------- */
+
+	public static function menu() {
+		add_submenu_page( 'edit.php?post_type=nse_estimator', 'Estimator settings', 'Settings', 'manage_options', 'pe-settings', array( __CLASS__, 'render' ) );
+	}
+
+	public static function register() {
+		register_setting(
+			'pe_settings',
+			self::OPTION,
+			array(
+				'type'              => 'array',
+				'sanitize_callback' => array( __CLASS__, 'sanitize_option' ),
+				'default'           => self::defaults(),
+			)
+		);
+	}
+
+	public static function assets( $hook ) {
+		if ( 'nse_estimator_page_pe-settings' !== $hook ) {
+			return;
+		}
+		wp_enqueue_style( 'wp-color-picker' );
+		wp_enqueue_script( 'wp-color-picker' );
+		wp_add_inline_script( 'wp-color-picker', 'jQuery(function($){$(".pe-color").wpColorPicker();});' );
+	}
+
+	private static function name( $key, $design = false ) {
+		return esc_attr( self::OPTION . ( $design ? '[design]' : '' ) . '[' . $key . ']' );
+	}
+
+	public static function render() {
+		if ( ! current_user_can( 'manage_options' ) ) {
+			return;
+		}
+		$s  = self::get();
+		$d  = $s['design'];
+		$ch = self::choices();
+
+		echo '<div class="wrap"><h1>Estimator settings</h1>';
+		echo '<p>These defaults apply to every estimator. Each estimator can override them in its own settings.</p>';
+		settings_errors( self::OPTION );
+		echo '<form method="post" action="options.php">';
+		settings_fields( 'pe_settings' );
+
+		echo '<h2>Lead email defaults</h2>';
+		echo '<p>Used when an estimator leaves these fields blank. Separate multiple addresses with commas.</p>';
+		echo '<table class="form-table" role="presentation">';
+		$email_rows = array(
+			'notify_email' => array( 'Send leads to', 'Falls back to the site admin email (' . get_option( 'admin_email' ) . ') when blank.' ),
+			'cc'           => array( 'CC', 'Copied on every lead. Visible to other recipients.' ),
+			'bcc'          => array( 'BCC', 'Blind copied on every lead. Hidden from other recipients.' ),
+		);
+		foreach ( $email_rows as $key => $row ) {
+			printf(
+				'<tr><th scope="row"><label for="pe-%1$s">%2$s</label></th><td><input type="text" class="regular-text" id="pe-%1$s" name="%3$s" value="%4$s" placeholder="name@example.com"><p class="description">%5$s</p></td></tr>',
+				esc_attr( $key ),
+				esc_html( $row[0] ),
+				self::name( $key ), // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- escaped in name().
+				esc_attr( $s[ $key ] ),
+				esc_html( $row[1] )
+			);
+		}
+		echo '</table>';
+
+		echo '<h2>Design defaults</h2>';
+		echo '<table class="form-table" role="presentation">';
+		self::select_row( 'Style', 'style', $ch['style'], $d['style'] );
+		foreach ( array(
+			'accent'     => array( 'Accent color', 'Buttons, selected options, and the price bar. Text on it switches between white and dark automatically.' ),
+			'text'       => array( 'Text color', '' ),
+			'muted'      => array( 'Secondary text color', 'Descriptions, labels, and fine print.' ),
+			'background' => array( 'Background color', '' ),
+			'border'     => array( 'Border color', '' ),
+		) as $key => $row ) {
+			printf(
+				'<tr><th scope="row">%s</th><td><input type="text" class="pe-color" name="%s" value="%s" data-default-color="%s">%s</td></tr>',
+				esc_html( $row[0] ),
+				self::name( $key, true ), // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- escaped in name().
+				esc_attr( $d[ $key ] ),
+				esc_attr( self::design_defaults()[ $key ] ),
+				$row[1] ? '<p class="description">' . esc_html( $row[1] ) . '</p>' : ''
+			);
+		}
+		self::select_row( 'Font', 'font', $ch['font'], $d['font'] );
+		self::select_row( 'Corners', 'radius', $ch['radius'], (string) $d['radius'] );
+		printf(
+			'<tr><th scope="row"><label for="pe-max-width">Max width</label></th><td><input type="number" id="pe-max-width" min="320" max="1600" step="10" name="%s" value="%d"> px</td></tr>',
+			self::name( 'max_width', true ), // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- escaped in name().
+			(int) $d['max_width']
+		);
+		echo '<tr><th scope="row">Show</th><td><fieldset>';
+		foreach ( array(
+			'show_business_name' => 'Business name above the headline',
+			'show_step_numbers'  => 'Step numbers',
+			'sticky_bar'         => 'Keep the price bar stuck to the bottom while scrolling',
+		) as $key => $label ) {
+			printf(
+				'<label><input type="checkbox" name="%s" value="1"%s> %s</label><br>',
+				self::name( $key, true ), // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- escaped in name().
+				checked( $d[ $key ], true, false ),
+				esc_html( $label )
+			);
+		}
+		echo '</fieldset></td></tr></table>';
+
+		echo '<p class="submit">';
+		submit_button( 'Save settings', 'primary', 'submit', false );
+		echo ' ';
+		submit_button( 'Reset to defaults', 'secondary', 'pe_reset_defaults', false, array( 'onclick' => "return confirm('Reset all estimator settings to defaults?');" ) );
+		echo '</p></form></div>';
+	}
+
+	private static function select_row( $label, $key, array $choices, $current ) {
+		printf( '<tr><th scope="row"><label for="pe-%1$s">%2$s</label></th><td><select id="pe-%1$s" name="%3$s">', esc_attr( $key ), esc_html( $label ), self::name( $key, true ) ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- escaped in name().
+		foreach ( $choices as $val => $text ) {
+			printf( '<option value="%s"%s>%s</option>', esc_attr( $val ), selected( (string) $current, (string) $val, false ), esc_html( $text ) );
+		}
+		echo '</select></td></tr>';
+	}
+}

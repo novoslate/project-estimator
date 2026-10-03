@@ -252,7 +252,7 @@ class NSE_Leads {
 	}
 
 	private static function notify( $c, $lead ) {
-		$to = $c['business']['notify_email'] ? $c['business']['notify_email'] : get_option( 'admin_email' );
+		$rcpt = NSE_Settings::recipients( $c );
 
 		$lines = array(
 			'New quote request from ' . $lead['estimator'],
@@ -287,7 +287,13 @@ class NSE_Leads {
 		if ( $lead['email'] ) {
 			$headers[] = 'Reply-To: ' . $lead['name'] . ' <' . $lead['email'] . '>';
 		}
-		wp_mail( $to, 'New ' . strtolower( $lead['project'] ) . ' quote request: ' . $lead['name'], implode( "\n", $lines ), $headers );
+		foreach ( $rcpt['cc'] as $addr ) {
+			$headers[] = 'Cc: ' . $addr;
+		}
+		foreach ( $rcpt['bcc'] as $addr ) {
+			$headers[] = 'Bcc: ' . $addr;
+		}
+		wp_mail( $rcpt['to'], 'New ' . strtolower( $lead['project'] ) . ' quote request: ' . $lead['name'], implode( "\n", $lines ), $headers );
 
 		if ( $c['business']['webhook_url'] ) {
 			wp_remote_post(

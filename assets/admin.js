@@ -80,6 +80,11 @@
 		cfg.timeline_choices = cfg.timeline_choices || [];
 		cfg.tracking = cfg.tracking || clone(NSE_ADMIN.defaults.tracking);
 		if (cfg.project_label === undefined) cfg.project_label = 'What are you planning?';
+		cfg.business = cfg.business || {};
+		['cc', 'bcc', 'notify_email'].forEach(function (k) { if (cfg.business[k] === undefined) cfg.business[k] = ''; });
+		delete cfg.business.accent;
+		if (cfg.design_mode !== 'custom') cfg.design_mode = 'global';
+		if (!cfg.design || typeof cfg.design !== 'object') cfg.design = clone(G.design || {});
 	}
 
 	/* Field builders */
@@ -100,11 +105,11 @@
 			'<textarea rows="' + (o.rows || 2) + '" data-path="' + path + '" data-type="' + (o.lines ? 'lines' : 'text') + '">' + esc(v) + '</textarea>' +
 			(o.help ? '<em>' + o.help + '</em>' : '') + '</label>';
 	}
-	function select(label, path, choices, rerender) {
+	function select(label, path, choices, rerender, numeric) {
 		var v = get(path);
-		return '<label class="nse-f"><span>' + label + '</span><select data-path="' + path + '" data-type="text"' + (rerender ? ' data-rerender="1"' : '') + '>' +
+		return '<label class="nse-f"><span>' + label + '</span><select data-path="' + path + '" data-type="' + (numeric ? 'number' : 'text') + '"' + (rerender ? ' data-rerender="1"' : '') + '>' +
 			choices.map(function (c) {
-				return '<option value="' + esc(c[0]) + '"' + (c[0] === v ? ' selected' : '') + '>' + esc(c[1]) + '</option>';
+				return '<option value="' + esc(c[0]) + '"' + (String(c[0]) === String(v) ? ' selected' : '') + '>' + esc(c[1]) + '</option>';
 			}).join('') + '</select></label>';
 	}
 	function check(label, path, help) {
@@ -207,6 +212,38 @@
 			'</div>' + adder;
 	}
 
+	var G = NSE_ADMIN.global || { design: {} };
+	var designEdited = NSE_ADMIN.config && NSE_ADMIN.config.design_mode === 'custom';
+	var DC = NSE_ADMIN.designChoices || {};
+	function pairs(obj) { return Object.keys(obj || {}).map(function (k) { return [k, obj[k]]; }); }
+
+	function designCard() {
+		var custom = cfg.design_mode === 'custom';
+		var modes = '<div class="nse-row nse-modes">' +
+			'<label><input type="radio" name="nse-design-mode" value="global" data-action="design-mode"' + (custom ? '' : ' checked') + '> Use global design settings</label>' +
+			'<label><input type="radio" name="nse-design-mode" value="custom" data-action="design-mode"' + (custom ? ' checked' : '') + '> Custom design for this estimator</label>' +
+			'</div>';
+		if (!custom) {
+			return card('Design', modes, 'This estimator uses the defaults from <a href="' + esc(NSE_ADMIN.settingsUrl) + '">Estimators > Settings</a>. Switch to custom to change colors and style just for this estimator.');
+		}
+		return card('Design', modes +
+			'<div class="nse-grid">' +
+			select('Style', 'design.style', pairs(DC.style)) +
+			text('Accent color', 'design.accent', { type: 'color', help: 'Buttons, selections, and the price bar.' }) +
+			text('Text color', 'design.text', { type: 'color' }) +
+			text('Secondary text color', 'design.muted', { type: 'color' }) +
+			text('Background color', 'design.background', { type: 'color' }) +
+			text('Border color', 'design.border', { type: 'color' }) +
+			select('Font', 'design.font', pairs(DC.font)) +
+			select('Corners', 'design.radius', pairs(DC.radius), false, true) +
+			text('Max width (px)', 'design.max_width', { type: 'number', num: true }) +
+			check('Show business name', 'design.show_business_name') +
+			check('Show step numbers', 'design.show_step_numbers') +
+			check('Sticky price bar', 'design.sticky_bar', 'Keeps the price visible at the bottom of the screen while scrolling.') +
+			'</div><p><button type="button" class="button-link" data-action="design-reset">Copy the current global design into this estimator</button></p>',
+			'Custom design applies only to this estimator.');
+	}
+
 	function render() {
 		normalize();
 		var fieldChoices = [['off', 'Hidden'], ['optional', 'Optional'], ['required', 'Required']];
@@ -223,11 +260,14 @@
 				'<div class="nse-grid">' +
 				text('Business name', 'business.name') +
 				text('Phone', 'business.phone') +
-				text('Send leads to', 'business.notify_email', { type: 'email', placeholder: NSE_ADMIN.adminEmail }) +
+				text('Send leads to', 'business.notify_email', { placeholder: G.notify_email || NSE_ADMIN.adminEmail, help: 'Blank uses the global default.' }) +
+				text('CC', 'business.cc', { placeholder: G.cc || 'name@example.com', help: 'Blank uses the global CC.' }) +
+				text('BCC', 'business.bcc', { placeholder: G.bcc || 'name@example.com', help: 'Blank uses the global BCC.' }) +
 				text('Webhook URL (optional)', 'business.webhook_url', { type: 'url', placeholder: 'https://hooks.zapier.com/...' }) +
-				text('Accent color', 'business.accent', { type: 'color' }) +
 				'</div>',
-				'Leads are saved under Estimators > Leads, emailed to the address above, and posted to the webhook if set. Use a dark accent color so white text stays readable.') +
+				'Leads are saved under Estimators > Leads, emailed to the addresses above, and posted to the webhook if set. Separate multiple emails with commas. Defaults live in <a href="' + esc(NSE_ADMIN.settingsUrl) + '">Estimators > Settings</a>.') +
+
+			designCard() +
 
 			card('Page text',
 				'<div class="nse-grid">' +
@@ -276,6 +316,7 @@
 		else if (t === 'lines') v = el.value.split('\n').map(function (s) { return s.trim(); }).filter(Boolean);
 		else v = el.value;
 		set(el.dataset.path, v);
+		if (el.dataset.path.indexOf('design.') === 0) designEdited = true;
 		sync();
 		if (el.dataset.tabs) {
 			var tab = root.querySelector('.nse-tab.is-active');
@@ -332,6 +373,16 @@
 			list.push(/\.addons$/.test(b.dataset.list)
 				? { name: '', note: '', low: 0, high: 0, per_unit: false, feature: 'none' }
 				: { name: '', note: '', low: 0, high: 0, variant: '' });
+		} else if (a === 'design-mode') {
+			var mode = b.value;
+			if (mode === cfg.design_mode) return;
+			if (mode === 'custom' && !designEdited) {
+				cfg.design = clone(G.design);
+			}
+			cfg.design_mode = mode;
+		} else if (a === 'design-reset') {
+			if (!window.confirm('Replace this estimator\'s design with the current global design?')) return;
+			cfg.design = clone(G.design);
 		} else if (a === 'default-colors') {
 			var dc = NSE_ADMIN.colors[P[ap].preview];
 			if (P[ap].colors.length && !window.confirm('Replace this project type\'s colors with the defaults?')) return;
