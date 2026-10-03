@@ -54,6 +54,7 @@ class NSE_Settings {
 			'bcc'          => '',
 			'logo_id'      => 0,
 			'website'      => '',
+			'reply_to'     => '',
 			'pdf'          => self::pdf_defaults(),
 			'design'       => self::design_defaults(),
 		);
@@ -166,6 +167,7 @@ class NSE_Settings {
 			'bcc'          => isset( $in['bcc'] ) ? self::sanitize_emails( $in['bcc'] ) : '',
 			'logo_id'      => isset( $in['logo_id'] ) ? absint( $in['logo_id'] ) : 0,
 			'website'      => isset( $in['website'] ) ? self::sanitize_website( $in['website'] ) : '',
+			'reply_to'     => isset( $in['reply_to'] ) && is_email( sanitize_email( $in['reply_to'] ) ) ? sanitize_email( $in['reply_to'] ) : '',
 			'pdf'          => self::sanitize_pdf( isset( $in['pdf'] ) ? $in['pdf'] : array() ),
 			'design'       => self::sanitize_design( isset( $in['design'] ) ? $in['design'] : array() ),
 		);
@@ -407,6 +409,12 @@ class NSE_Settings {
 			);
 		}
 		echo '</fieldset></td></tr>';
+		printf(
+			'<tr><th scope="row"><label for="pe-reply-to">Reply-to address</label></th><td><input type="email" class="regular-text" id="pe-reply-to" name="%s" value="%s" placeholder="%s"><p class="description">Where replies go when a customer answers their estimate email. Leave blank to use the first "Send leads to" address.</p></td></tr>',
+			self::name( 'reply_to' ), // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- escaped in name().
+			esc_attr( $s['reply_to'] ),
+			esc_attr( $s['notify_email'] ? strtok( $s['notify_email'], ',' ) : get_option( 'admin_email' ) )
+		);
 		printf(
 			'<tr><th scope="row"><label for="pe-cs">Customer email subject</label></th><td><input type="text" class="large-text" id="pe-cs" name="%s" value="%s"></td></tr>',
 			esc_attr( self::OPTION . '[pdf][customer_subject]' ),

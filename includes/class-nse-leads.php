@@ -367,10 +367,12 @@ class NSE_Leads {
 		$body    = strtr( $body_tpl, $vars );
 		$body   .= "\n\nDownload your estimate anytime: " . $lead['pdf_url'];
 
-		$rcpt    = NSE_Settings::recipients( $c );
-		$headers = array();
-		if ( ! empty( $rcpt['to'][0] ) ) {
-			$headers[] = 'Reply-To: ' . $c['business']['name'] . ' <' . $rcpt['to'][0] . '>';
+		/* Replies go to the Reply-to setting, or the first lead recipient. */
+		$rcpt     = NSE_Settings::recipients( $c );
+		$reply_to = $settings['reply_to'] ? $settings['reply_to'] : ( ! empty( $rcpt['to'][0] ) ? $rcpt['to'][0] : '' );
+		$headers  = array();
+		if ( $reply_to ) {
+			$headers[] = 'Reply-To: ' . str_replace( array( '"', '<', '>' ), '', $c['business']['name'] ) . ' <' . $reply_to . '>';
 		}
 		wp_mail( $lead['email'], $subject, $body, $headers, array( $pdf_path ) );
 	}

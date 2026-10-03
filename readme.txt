@@ -2,7 +2,7 @@
 Contributors: novoslate
 Requires at least: 6.0
 Requires PHP: 7.4
-Stable tag: 1.7.0
+Stable tag: 1.7.1
 License: GPLv2 or later
 
 Instant price estimators with lead capture for contractors.
@@ -52,7 +52,7 @@ Text cells that start with =, +, -, or @ are prefixed with an apostrophe so spre
 == PDF estimates ==
 Every quote request creates a branded, one-page PDF: logo on the accent color band, the price range, the 3D illustration exactly as the customer configured it, project details (type, style, color, size, extras), the customer's information, next steps, and the fine print.
 
-* The customer gets an email with the PDF attached when they enter an email address. Edit the subject and message under Estimators > Settings, using {first_name}, {name}, {business}, {phone}, {project}, {low}, and {high}.
+* The customer gets an email with the PDF attached when they enter an email address. Replies go to the "Reply-to address" setting, or the first "Send leads to" address when it is blank. Edit the subject and message under Estimators > Settings, using {first_name}, {name}, {business}, {phone}, {project}, {low}, and {high}.
 * The business lead email gets the same PDF attached.
 * The confirmation screen shows a "Download your estimate (PDF)" button.
 * Each lead in the admin has a "View PDF estimate" button, and the webhook payload includes pdf_url.
@@ -98,6 +98,9 @@ Suggested Google Ads tracking template:
 Disable capture with: add_filter( 'pe_capture_attribution', '__return_false' );
 
 == Changelog ==
+= 1.7.1 =
+* New "Reply-to address" setting for the customer estimate email.
+
 = 1.7.0 =
 * Lead status (New, Contacted, Quoted, Booked, Lost) with a Status column, filter, bulk actions, and status history.
 * Booked job value on each lead.
