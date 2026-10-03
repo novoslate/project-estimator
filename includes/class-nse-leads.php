@@ -223,6 +223,7 @@ class NSE_Leads {
 		}
 		update_post_meta( $lead_id, self::META_KEY, $lead );
 		update_post_meta( $lead_id, '_nse_estimator_id', $id );
+		NSE_Status::set( $lead_id, 'new' );
 		if ( ! empty( $attr['gclid'] ) ) {
 			update_post_meta( $lead_id, '_pe_gclid', $attr['gclid'] );
 		}

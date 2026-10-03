@@ -2,7 +2,7 @@
 Contributors: novoslate
 Requires at least: 6.0
 Requires PHP: 7.4
-Stable tag: 1.6.3
+Stable tag: 1.7.0
 License: GPLv2 or later
 
 Instant price estimators with lead capture for contractors.
@@ -38,6 +38,16 @@ Estimators > Settings holds defaults for every estimator:
 * Design defaults: style (card, soft shadow, or flat), accent, text, secondary text, background, and border colors, font, corners, max width, and whether to show the business name, step numbers, and a sticky price bar. Text on the accent color switches between white and dark automatically for readability.
 
 Each estimator has a Design card set to "Use global design settings" by default. Switch it to custom to style one estimator differently.
+
+== Lead status and export ==
+Every lead has a status: New, Contacted, Quoted, Booked, or Lost. Change it on the lead screen or for many leads at once with the bulk actions on Estimators > Leads, and filter the list by status. Booked leads can store the real contract amount as "Booked job value". The date each status was first reached is recorded.
+
+Estimators > Export downloads a CSV:
+
+* All lead details: contact info, project selections, estimate, status, booked value, source, campaign, keyword, click IDs (GCLID, GBRAID, WBRAID, MSCLKID, FBCLID), landing page, and PDF link. Filter by date range, estimator, and status. "Export to CSV" is also a bulk action on the Leads list.
+* Google Ads offline conversions: booked leads with a GCLID, in Google's upload template. Conversion time is when the lead was marked Booked, in the site time zone. Value is the booked job value, or the middle of the estimate when none is set. Create an "Import" conversion action in Google Ads first and use its exact name.
+
+Text cells that start with =, +, -, or @ are prefixed with an apostrophe so spreadsheets never run them as formulas.
 
 == PDF estimates ==
 Every quote request creates a branded, one-page PDF: logo on the accent color band, the price range, the 3D illustration exactly as the customer configured it, project details (type, style, color, size, extras), the customer's information, next steps, and the fine print.
@@ -88,6 +98,12 @@ Suggested Google Ads tracking template:
 Disable capture with: add_filter( 'pe_capture_attribution', '__return_false' );
 
 == Changelog ==
+= 1.7.0 =
+* Lead status (New, Contacted, Quoted, Booked, Lost) with a Status column, filter, bulk actions, and status history.
+* Booked job value on each lead.
+* CSV export of all lead details, with date, estimator, and status filters, plus a bulk "Export to CSV" action.
+* Google Ads offline conversions export for booked leads from ad clicks.
+
 = 1.6.3 =
 * PDF: the illustration spans the full content width, using a wider capture made for the page.
 * PDF: headings, underlines, and detail rows share one left edge, with consistent spacing under each heading.
