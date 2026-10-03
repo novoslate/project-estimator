@@ -119,6 +119,12 @@ class NSE_Leads {
 		$c = NSE_Config::get( $id );
 		$f = $c['fields'];
 
+		// reCAPTCHA (when turned on under Estimators > Settings).
+		$rc = NSE_Recaptcha::verify( isset( $p['recaptcha'] ) ? $p['recaptcha'] : '', $ip, $c['business']['phone'] );
+		if ( ! $rc['ok'] ) {
+			return self::fail( $rc['message'], 403 );
+		}
+
 		$get = function ( $k ) use ( $p ) {
 			return isset( $p[ $k ] ) ? sanitize_text_field( (string) $p[ $k ] ) : '';
 		};
@@ -200,6 +206,7 @@ class NSE_Leads {
 			'estimate_low'  => $est['low'],
 			'estimate_high' => $est['high'],
 			'page'          => isset( $p['page'] ) ? esc_url_raw( (string) $p['page'] ) : '',
+			'recaptcha_score' => null === $rc['score'] ? '' : $rc['score'],
 			'submitted'     => current_time( 'mysql' ),
 		);
 		$attr = self::sanitize_attribution( isset( $p['attribution'] ) ? $p['attribution'] : null );
@@ -437,6 +444,7 @@ class NSE_Leads {
 			'Estimate shown' => self::money( $lead['estimate_low'] ) . ' to ' . self::money( $lead['estimate_high'] ),
 			'Page'           => $lead['page'],
 			'Submitted'      => $lead['submitted'],
+			'reCAPTCHA score' => isset( $lead['recaptcha_score'] ) && '' !== $lead['recaptcha_score'] ? number_format( (float) $lead['recaptcha_score'], 1 ) . ' (1.0 = person, 0.0 = bot)' : '',
 			'Source'         => isset( $lead['source'] ) ? $lead['source'] : '',
 		);
 		$rows += self::attribution_rows( isset( $lead['attribution'] ) ? $lead['attribution'] : array() );

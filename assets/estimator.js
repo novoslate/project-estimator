@@ -290,7 +290,24 @@
 		formKids.push(h('div', { class: 'nse-hp', 'aria-hidden': 'true' }, [hp]));
 		var err = h('p', { class: 'nse-err', role: 'alert' });
 		var btn = h('button', { type: 'submit', class: 'nse-btn', text: cfg.cta_text || 'Send my quote request' });
+		/* reCAPTCHA: v2 shows a checkbox here; v3 runs invisibly at submit time. */
+		var rc = cfg.recaptcha && cfg.recaptcha.site_key ? cfg.recaptcha : null;
+		var rcBox = null, rcWidget = null;
+		if (rc && rc.mode === 'v2') {
+			rcBox = h('div', { class: 'nse-captcha nse-full' });
+			formKids.push(rcBox);
+		}
 		formKids.push(err, h('div', { class: 'nse-full' }, [btn]));
+		if (rc && rc.hide_badge) {
+			root.classList.add('nse--rc-hidden');
+			formKids.push(h('p', { class: 'nse-rc-note nse-full' }, [
+				'This site is protected by reCAPTCHA and the Google ',
+				h('a', { href: 'https://policies.google.com/privacy', target: '_blank', rel: 'noopener', text: 'Privacy Policy' }),
+				' and ',
+				h('a', { href: 'https://policies.google.com/terms', target: '_blank', rel: 'noopener', text: 'Terms of Service' }),
+				' apply.'
+			]));
+		}
 
 		var form = h('form', { class: 'nse-form', novalidate: true }, formKids);
 		var done = h('div', { class: 'nse-done', tabindex: '-1', hidden: true });
@@ -300,6 +317,45 @@
 		]);
 		root.appendChild(quoteSec);
 		buildProject();
+
+		function rcRender() {
+			if (!rcBox) return;
+			var tries = 0;
+			(function wait() {
+				if (window.grecaptcha && typeof window.grecaptcha.render === 'function') {
+					try { rcWidget = window.grecaptcha.render(rcBox, { sitekey: rc.site_key }); } catch (e) { /* already rendered */ }
+				} else if (tries++ < 150) {
+					setTimeout(wait, 200);
+				}
+			})();
+		}
+		rcRender();
+
+		function rcReset() {
+			if (rcWidget !== null && window.grecaptcha && window.grecaptcha.reset) {
+				try { window.grecaptcha.reset(rcWidget); } catch (e) { /* ignore */ }
+			}
+		}
+
+		/* Resolves with a token ('' when reCAPTCHA is off). Rejects when the v2 box is not checked. */
+		function rcToken() {
+			return new Promise(function (resolve, reject) {
+				if (!rc) return resolve('');
+				if (rc.mode === 'v2') {
+					var t = rcWidget !== null && window.grecaptcha ? window.grecaptcha.getResponse(rcWidget) : '';
+					return t ? resolve(t) : reject(new Error('Please check the "I\'m not a robot" box.'));
+				}
+				if (!window.grecaptcha || !window.grecaptcha.ready) return resolve('');
+				var settled = false;
+				var finish = function (t) { if (!settled) { settled = true; resolve(t || ''); } };
+				setTimeout(function () { finish(''); }, 8000);
+				window.grecaptcha.ready(function () {
+					try {
+						window.grecaptcha.execute(rc.site_key, { action: 'quote_request' }).then(finish, function () { finish(''); });
+					} catch (e) { finish(''); }
+				});
+			});
+		}
 
 		/* Sticky price bar */
 		var rangeEl = h('strong', {});
@@ -455,7 +511,11 @@
 				page: window.location.href,
 				attribution: attribution()
 			};
-			snapshot()
+			rcToken()
+				.then(function (token) {
+					payload.recaptcha = token;
+					return snapshot();
+				})
 				.then(function (illustration) {
 					payload.illustration = illustration;
 					return fetch(root.getAttribute('data-endpoint'), {
@@ -493,6 +553,7 @@
 					fireConversion(res.j, payload);
 				})
 				.catch(function (x) {
+					rcReset(); // tokens work once, so a retry needs a fresh check
 					fail(x.message || ('Your request did not go through. Please try again' + (biz.phone ? ' or call ' + biz.phone : '') + '.'));
 					btn.disabled = false;
 					btn.textContent = cfg.cta_text || 'Send my quote request';

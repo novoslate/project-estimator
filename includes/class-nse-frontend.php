@@ -44,6 +44,11 @@ class NSE_Frontend {
 		}
 		wp_enqueue_style( 'nse-estimator' );
 		wp_enqueue_script( 'nse-estimator' );
+		$rc_url = NSE_Recaptcha::script_url();
+		if ( $rc_url ) {
+			// Only pages with an estimator load Google's script.
+			wp_enqueue_script( 'pe-recaptcha', $rc_url, array(), null, array( 'in_footer' => true, 'strategy' => 'async' ) ); // phpcs:ignore WordPress.WP.EnqueuedResourceParameters.MissingVersion -- Google's URL must not get a version query.
+		}
 
 		$config = NSE_Config::public_config( NSE_Config::get( $id ) );
 		$design = $config['design'];

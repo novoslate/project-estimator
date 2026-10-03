@@ -2,7 +2,7 @@
 Contributors: novoslate
 Requires at least: 6.0
 Requires PHP: 7.4
-Stable tag: 1.7.1
+Stable tag: 1.8.0
 License: GPLv2 or later
 
 Instant price estimators with lead capture for contractors.
@@ -38,6 +38,14 @@ Estimators > Settings holds defaults for every estimator:
 * Design defaults: style (card, soft shadow, or flat), accent, text, secondary text, background, and border colors, font, corners, max width, and whether to show the business name, step numbers, and a sticky price bar. Text on the accent color switches between white and dark automatically for readability.
 
 Each estimator has a Design card set to "Use global design settings" by default. Switch it to custom to style one estimator differently.
+
+== Spam protection ==
+Every form has a hidden honeypot field, a minimum fill time, and a per-visitor rate limit. For more protection, turn on Google reCAPTCHA under Estimators > Settings > Spam protection:
+
+* v2 Checkbox: visitors check "I'm not a robot" before sending.
+* v3 Invisible: no checkbox. Google scores each request from 0.0 (bot) to 1.0 (person) and requests under the minimum score (0.5 by default) are blocked. Each lead's score is saved and included in the CSV export. The floating badge can be hidden; the required Google notice is then shown under the form.
+
+Create keys at google.com/recaptcha/admin with the same type you choose (v2 and v3 keys are different) and add the site's domain. Tokens are verified on the server and the secret key is never sent to visitors. Google's script loads only on pages with an estimator. If Google cannot be reached, leads are accepted and the problem is written to the PHP error log.
 
 == Lead status and export ==
 Every lead has a status: New, Contacted, Quoted, Booked, or Lost. Change it on the lead screen or for many leads at once with the bulk actions on Estimators > Leads, and filter the list by status. Booked leads can store the real contract amount as "Booked job value". The date each status was first reached is recorded.
@@ -98,6 +106,10 @@ Suggested Google Ads tracking template:
 Disable capture with: add_filter( 'pe_capture_attribution', '__return_false' );
 
 == Changelog ==
+= 1.8.0 =
+* Google reCAPTCHA v2 Checkbox and v3 Invisible, with server-side verification.
+* v3 score threshold, saved per lead and in the CSV export, plus an option to hide the badge.
+
 = 1.7.1 =
 * New "Reply-to address" setting for the customer estimate email.
 

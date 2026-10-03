@@ -55,6 +55,7 @@ class NSE_Settings {
 			'logo_id'      => 0,
 			'website'      => '',
 			'reply_to'     => '',
+			'recaptcha'    => NSE_Recaptcha::defaults(),
 			'pdf'          => self::pdf_defaults(),
 			'design'       => self::design_defaults(),
 		);
@@ -168,6 +169,7 @@ class NSE_Settings {
 			'logo_id'      => isset( $in['logo_id'] ) ? absint( $in['logo_id'] ) : 0,
 			'website'      => isset( $in['website'] ) ? self::sanitize_website( $in['website'] ) : '',
 			'reply_to'     => isset( $in['reply_to'] ) && is_email( sanitize_email( $in['reply_to'] ) ) ? sanitize_email( $in['reply_to'] ) : '',
+			'recaptcha'    => NSE_Recaptcha::sanitize( isset( $in['recaptcha'] ) ? $in['recaptcha'] : array() ),
 			'pdf'          => self::sanitize_pdf( isset( $in['pdf'] ) ? $in['pdf'] : array() ),
 			'design'       => self::sanitize_design( isset( $in['design'] ) ? $in['design'] : array() ),
 		);
@@ -186,6 +188,9 @@ class NSE_Settings {
 			foreach ( array( 'show_business_name', 'show_step_numbers', 'sticky_bar' ) as $k ) {
 				$in['design'][ $k ] = ! empty( $in['design'][ $k ] );
 			}
+		}
+		if ( isset( $in['recaptcha'] ) && is_array( $in['recaptcha'] ) ) {
+			$in['recaptcha']['hide_badge'] = ! empty( $in['recaptcha']['hide_badge'] );
 		}
 		if ( isset( $in['pdf'] ) && is_array( $in['pdf'] ) ) {
 			foreach ( array( 'enabled', 'send_customer', 'attach_business' ) as $k ) {
@@ -426,6 +431,55 @@ class NSE_Settings {
 			esc_textarea( $p['customer_message'] )
 		);
 		echo '</table>';
+
+		$r     = $s['recaptcha'];
+		$rname = function ( $k ) {
+			return esc_attr( self::OPTION . '[recaptcha][' . $k . ']' );
+		};
+		echo '<h2 id="pe-spam">Spam protection</h2>';
+		echo '<p>Google reCAPTCHA blocks bots from submitting quote requests. Create keys at <a href="https://www.google.com/recaptcha/admin/create" target="_blank" rel="noopener">google.com/recaptcha/admin</a>, choosing the same type as below and adding this site\'s domain. v2 and v3 keys are not interchangeable.</p>';
+		if ( 'off' !== $r['mode'] && ( ! $r['site_key'] || ! $r['secret_key'] ) ) {
+			echo '<div class="notice notice-warning inline"><p><strong>reCAPTCHA is not running:</strong> add both the site key and the secret key.</p></div>';
+		}
+		echo '<table class="form-table" role="presentation">';
+		echo '<tr><th scope="row">reCAPTCHA</th><td><fieldset>';
+		foreach ( array(
+			'off' => array( 'Off', 'The honeypot, minimum fill time, and rate limit still apply.' ),
+			'v2'  => array( 'v2 Checkbox', 'Visitors check "I\'m not a robot" before sending. Sometimes asks for an image challenge.' ),
+			'v3'  => array( 'v3 Invisible', 'No checkbox. Google scores each request in the background and low scores are blocked.' ),
+		) as $val => $row ) {
+			printf(
+				'<label style="display:block;margin-bottom:6px"><input type="radio" name="%s" value="%s"%s> <strong>%s</strong> <span class="description">%s</span></label>',
+				$rname( 'mode' ), // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- escaped in $rname.
+				esc_attr( $val ),
+				checked( $r['mode'], $val, false ),
+				esc_html( $row[0] ),
+				esc_html( $row[1] )
+			);
+		}
+		echo '</fieldset></td></tr>';
+		printf(
+			'<tr class="pe-rc"><th scope="row"><label for="pe-rc-site">Site key</label></th><td><input type="text" class="regular-text code" id="pe-rc-site" name="%s" value="%s" autocomplete="off"></td></tr>',
+			$rname( 'site_key' ), // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- escaped in $rname.
+			esc_attr( $r['site_key'] )
+		);
+		printf(
+			'<tr class="pe-rc"><th scope="row"><label for="pe-rc-secret">Secret key</label></th><td><input type="password" class="regular-text code" id="pe-rc-secret" name="%s" value="%s" autocomplete="new-password"><p class="description">Kept on the server. Never sent to visitors.</p></td></tr>',
+			$rname( 'secret_key' ), // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- escaped in $rname.
+			esc_attr( $r['secret_key'] )
+		);
+		echo '<tr class="pe-rc-v3"><th scope="row"><label for="pe-rc-th">Minimum score</label></th><td><select id="pe-rc-th" name="' . $rname( 'threshold' ) . '">'; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- escaped in $rname.
+		foreach ( array( '0.3' => '0.3 (lenient, fewer real people blocked)', '0.5' => '0.5 (recommended)', '0.7' => '0.7 (strict, blocks more bots)' ) as $val => $label ) {
+			printf( '<option value="%s"%s>%s</option>', esc_attr( $val ), selected( (string) $r['threshold'], $val, false ), esc_html( $label ) );
+		}
+		echo '</select><p class="description">Scores run from 0.0 (bot) to 1.0 (person). Each lead\'s score is saved so you can tune this.</p></td></tr>';
+		printf(
+			'<tr class="pe-rc-v3"><th scope="row">Badge</th><td><label><input type="checkbox" name="%s" value="1"%s> Hide the floating reCAPTCHA badge</label><p class="description">Google requires a notice instead, which is added under the form automatically.</p></td></tr>',
+			$rname( 'hide_badge' ), // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- escaped in $rname.
+			checked( $r['hide_badge'], true, false )
+		);
+		echo '</table>';
+		echo '<script>(function(){function s(){var m=(document.querySelector(\'input[name="pe_settings[recaptcha][mode]"]:checked\')||{}).value;document.querySelectorAll(".pe-rc").forEach(function(r){r.style.display=m==="off"?"none":"";});document.querySelectorAll(".pe-rc-v3").forEach(function(r){r.style.display=m==="v3"?"":"none";});}document.querySelectorAll(\'input[name="pe_settings[recaptcha][mode]"]\').forEach(function(i){i.addEventListener("change",s);});s();})();</script>';
 
 		echo '<h2>Design defaults</h2>';
 		echo '<table class="form-table" role="presentation">';

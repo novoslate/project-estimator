@@ -77,6 +77,10 @@
 .nse-full { grid-column: 1 / -1; }
 .nse-field label { display: block; font-size: .85em; color: var(--nse-muted); margin: 0 0 4px; }
 .nse-field input, .nse-field select, .nse-field textarea { display: block; width: 100%; max-width: none; margin: 0; padding: 11px 12px; font: inherit; color: var(--nse-ink); background: var(--nse-bg); border: 1px solid var(--nse-line); border-radius: calc(var(--nse-inner) * .8); box-shadow: none; }
+.nse-captcha { min-height: 78px; }
+.nse-rc-note { grid-column: 1 / -1; margin: 0; font-size: .75em; color: var(--nse-muted); }
+.nse-rc-note a { color: inherit; text-decoration: underline; }
+body:has(.nse--rc-hidden) .grecaptcha-badge { visibility: hidden; }
 .nse-hp { position: absolute; left: -9999px; width: 1px; height: 1px; overflow: hidden; }
 .nse-err { grid-column: 1 / -1; margin: 0; min-height: 1.2em; color: #B42318; font-size: .9em; }
 .nse button.nse-btn { all: unset; box-sizing: border-box; display: block; width: 100%; text-align: center; cursor: pointer; padding: 14px 18px; border-radius: var(--nse-inner); background: var(--nse-accent); color: var(--nse-on-accent); font: inherit; font-weight: 600; }

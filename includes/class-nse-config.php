@@ -53,6 +53,7 @@ class NSE_Config {
 	public static function public_config( array $c ) {
 		unset( $c['business']['notify_email'], $c['business']['cc'], $c['business']['bcc'], $c['business']['webhook_url'] );
 		$c['design'] = NSE_Settings::resolve_design( $c );
+		$c['recaptcha'] = NSE_Recaptcha::public_config();
 		unset( $c['design_mode'] );
 		return $c;
 	}
