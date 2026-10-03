@@ -17,7 +17,7 @@ class NSE_Export {
 	}
 
 	public static function menu() {
-		add_submenu_page( 'edit.php?post_type=nse_estimator', 'Export leads', 'Export', self::CAP, 'pe-export', array( __CLASS__, 'render' ) );
+		add_submenu_page( 'edit.php?post_type=nse_estimator', 'Export leads', 'Export leads', self::CAP, 'pe-export', array( __CLASS__, 'render' ) );
 	}
 
 	/* ---------- Page ---------- */

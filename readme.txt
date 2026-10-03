@@ -2,7 +2,7 @@
 Contributors: novoslate
 Requires at least: 6.0
 Requires PHP: 7.4
-Stable tag: 1.10.0
+Stable tag: 1.11.0
 License: GPLv2 or later
 
 Instant price estimators with lead capture for contractors.
@@ -58,6 +58,15 @@ Every form has a hidden honeypot field, a minimum fill time, and a per-visitor r
 * v3 Invisible: no checkbox. Google scores each request from 0.0 (bot) to 1.0 (person) and requests under the minimum score (0.5 by default) are blocked. Each lead's score is saved and included in the CSV export. The floating badge can be hidden; the required Google notice is then shown under the form.
 
 Create keys at google.com/recaptcha/admin with the same type you choose (v2 and v3 keys are different) and add the site's domain. Tokens are verified on the server and the secret key is never sent to visitors. Google's script loads only on pages with an estimator. If Google cannot be reached, leads are accepted and the problem is written to the PHP error log.
+
+== Import / Export ==
+Estimators > Import / Export copies setups between sites:
+
+* Export downloads a JSON file with the estimators you pick (project types, pricing, colors, previews, form fields, tracking, design) and, optionally, the site-wide settings (design defaults, PDF and customer email text, spam protection options, and the logo, embedded in the file).
+* "Include business details" adds business name, phone, lead emails, CC/BCC, reply-to, webhook URLs, and the PDF website. Leave it unchecked when copying a setup to a different client. reCAPTCHA keys are never exported.
+* Import shows a review step first. Each estimator can be created as new, replace an existing one (keeping its title and shortcode), or be skipped. A site that already has reCAPTCHA keys keeps its keys and mode.
+
+The Estimators list also has Duplicate (copies an estimator as a draft) and Export links on each row.
 
 == Dashboard ==
 Estimators > Dashboard shows how estimators perform for any date range (last 7, 30, or 90 days, this month, last month, this year, or custom), for all estimators or one:
@@ -131,6 +140,11 @@ Suggested Google Ads tracking template:
 Disable capture with: add_filter( 'pe_capture_attribution', '__return_false' );
 
 == Changelog ==
+= 1.11.0 =
+* New Estimators > Import / Export for copying estimators and site-wide settings (including the logo) between sites, with a review step before importing.
+* Duplicate and Export row actions on the Estimators list.
+* The leads export page is now named "Export leads".
+
 = 1.10.0 =
 * New Estimators > Dashboard with views, starts, quote requests, conversion and close rates, pipeline and booked value, sources, campaigns, and popular choices, compared with the previous period.
 * Copyable summary for client reports and a 30-day widget on the WordPress dashboard.
