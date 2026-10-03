@@ -174,14 +174,17 @@
 
 	function patioCover(sc, W, D, variant, f, hooks) {
 		var Hb = 10, H = 9.2, F = main(ALU);
-		var zAt = function (y) { return Hb + (H - Hb) * (y / D); };
+		var zAt = function (y) { return Hb + (H - Hb) * (y / (D + 0.4)); };
 		slab(sc, -0.6, 0, W + 0.6, D + 0.6);
 		shadow(sc, 0, 0, W, D, 9);
 		hooks && hooks.underRoof && hooks.underRoof();
 
 		var solidTo = variant === 'lattice' ? 0 : variant === 'combo' ? W / 2 : W;
 		/* Ledger on the wall */
-		sc.box(0, 0, Hb - 0.6, W, 0.4, 0.6, F);
+		sc.box(0.05, 0, Hb - 0.6, W - 0.4, 0.4, 0.6, F);
+		/* End rafters close off both sides under the roof edge. Drawn before the roof so it sits on top. */
+		sc.slope(0, 0.35, 0, D - 0.4, Hb - 1, zAt(D - 0.4) - 1, 1, F);
+		sc.slope(W - 0.35, W, 0, D - 0.4, Hb - 1, zAt(D - 0.4) - 1, 1, F);
 		if (solidTo > 0) {
 			sc.slope(0, solidTo, 0, D + 0.4, Hb, H, 0.45, F);
 			for (var px = 2; px < solidTo - 0.5; px += 2) {
@@ -199,7 +202,7 @@
 		}
 		/* Front beam and posts */
 		sc.box(-0.3, D - 0.4, H - 1, W + 0.6, 0.8, 1, F);
-		hooks && hooks.beforePosts && hooks.beforePosts(H);
+		hooks && hooks.beforePosts && hooks.beforePosts(H, function (y) { return zAt(y) - 1; });
 		postXs(W, 12).forEach(function (x) { sc.box(x, D - 0.5, 0.3, 0.5, 0.5, H - 1.3, F); });
 		if (has(f, 'lights')) {
 			for (var lx = 2; lx < W - 1; lx += 4) sc.glow(lx, D + 0.2, H - 1.2);
@@ -250,19 +253,21 @@
 	}
 
 	function panel(sc, a, b, z0, z1, fill, mullion) {
-		/* Vertical panel between ground points a=[x,y] and b=[x,y] */
-		sc.poly([[a[0], a[1], z0], [b[0], b[1], z0], [b[0], b[1], z1], [a[0], a[1], z1]], fill, mullion || '#FFFFFF', 1.2);
+		/* Vertical panel between ground points a=[x,y] and b=[x,y]. z1 is a height or [heightAtA, heightAtB]. */
+		var za = Array.isArray(z1) ? z1[0] : z1, zb = Array.isArray(z1) ? z1[1] : z1;
+		sc.poly([[a[0], a[1], z0], [b[0], b[1], z0], [b[0], b[1], zb], [a[0], a[1], za]], fill, mullion || '#FFFFFF', 1.2);
 	}
 
-	function wallPanels(sc, from, to, z0, z1, every, fill, frame) {
+	/* Row of panels. top is a height, or a function (x, y) returning the height so tops can follow a sloped roof. */
+	function wallPanels(sc, from, to, z0, top, every, fill, frame) {
 		var len = Math.hypot(to[0] - from[0], to[1] - from[1]);
 		var n = Math.max(1, Math.round(len / every));
+		var topAt = typeof top === 'function' ? top : function () { return top; };
 		for (var i = 0; i < n; i++) {
 			var t0 = i / n, t1 = (i + 1) / n;
-			panel(sc,
-				[from[0] + (to[0] - from[0]) * t0, from[1] + (to[1] - from[1]) * t0],
-				[from[0] + (to[0] - from[0]) * t1, from[1] + (to[1] - from[1]) * t1],
-				z0, z1, fill, frame);
+			var a = [from[0] + (to[0] - from[0]) * t0, from[1] + (to[1] - from[1]) * t0];
+			var b = [from[0] + (to[0] - from[0]) * t1, from[1] + (to[1] - from[1]) * t1];
+			panel(sc, a, b, z0, [topAt(a[0], a[1]), topAt(b[0], b[1])], fill, frame);
 		}
 	}
 
@@ -282,9 +287,11 @@
 		/* Front wall (y = D) and right wall (x = W) */
 		sc.box(0, D - 0.4, 0.3, W, 0.4, knee, kneeC);
 		sc.box(W - 0.4, 0, 0.3, 0.4, D - 0.4, knee, kneeC);
-		var top = H - 0.1;
+		/* Roof underside height at depth y, so wall tops meet the sloped roof */
+		var under = function (x, y) { return Hb + (H - Hb) * (y / (D + 0.6)) - 0.05; };
+		var top = under(0, D);
 		wallPanels(sc, [0, D], [W, D], knee + 0.3, top, 3, glass, frame);
-		wallPanels(sc, [W, 0], [W, D], knee + 0.3, top, 3, glass, frame);
+		wallPanels(sc, [W, 0], [W, D], knee + 0.3, under, 3, glass, frame);
 		/* Door on the front */
 		var dx = Math.max(0.5, W / 2 - 1.5);
 		panel(sc, [dx, D + 0.02], [dx + 3, D + 0.02], 0.3, 7, variant === 'screen' ? 'rgba(80,90,95,.45)' : 'rgba(165,200,215,.75)', frame);
@@ -292,7 +299,7 @@
 		if (variant !== 'screen') {
 			/* Transom band */
 			sc.line([0, D, top - 1.2], [W, D, top - 1.2], frame, 1.1);
-			sc.line([W, 0, top - 1.2], [W, D, top - 1.2], frame, 1.1);
+			sc.line([W, 0, under(W, 0) - 1.2], [W, D, top - 1.2], frame, 1.1);
 		}
 		if (has(f, 'lights')) {
 			for (var lx = 2; lx < W - 1; lx += 4) sc.glow(lx, D + 0.4, H - 0.2);
@@ -303,7 +310,7 @@
 		var fill = variant === 'glass' ? 'rgba(175,208,222,.6)' : variant === 'vinyl' ? 'rgba(232,240,242,.72)' : 'rgba(80,90,95,.36)';
 		var knee = has(f, 'knee_wall') ? 2.6 : 0.3;
 		patioCover(sc, W, D, 'solid', f.filter(function (x) { return x !== 'lights'; }), {
-			beforePosts: function (H) {
+			beforePosts: function (H, underside) {
 				var top = H - 1;
 				if (knee > 0.3) {
 					sc.box(0, D - 0.5, 0.3, W, 0.5, knee - 0.3, STUCCO);
@@ -311,7 +318,7 @@
 				}
 				var frame = mainHex(variant === 'screen' ? '#E9E7E0' : '#FFFFFF');
 				wallPanels(sc, [0, D - 0.25], [W, D - 0.25], knee, top, 4, fill, frame);
-				wallPanels(sc, [W - 0.25, 0.3], [W - 0.25, D - 0.25], knee, top, 4, fill, frame);
+				wallPanels(sc, [W - 0.25, 0.3], [W - 0.25, D - 0.25], knee, function (x, y) { return underside(y); }, 4, fill, frame);
 				if (has(f, 'screen_door')) {
 					var dx = Math.max(0.6, W / 2 - 1.5);
 					panel(sc, [dx, D - 0.2], [dx + 3, D - 0.2], 0.3, 7, 'rgba(70,80,85,.5)', frame);

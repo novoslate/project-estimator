@@ -2,7 +2,7 @@
 Contributors: novoslate
 Requires at least: 6.0
 Requires PHP: 7.4
-Stable tag: 1.5.0
+Stable tag: 1.5.1
 License: GPLv2 or later
 
 Instant price estimators with lead capture for contractors.
@@ -74,6 +74,10 @@ Suggested Google Ads tracking template:
 Disable capture with: add_filter( 'pe_capture_attribution', '__return_false' );
 
 == Changelog ==
+= 1.5.1 =
+* Preview: side beams under both roof edges on patio covers and enclosures.
+* Preview: enclosure and sunroom side walls now follow the roof slope with no gap at the house.
+
 = 1.5.0 =
 * CC and BCC for lead emails, plus multiple "send to" addresses.
 * New Estimators > Settings page with lead email and design defaults.
