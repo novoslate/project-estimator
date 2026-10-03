@@ -228,14 +228,27 @@ class NSE_Leads {
 		}
 		$lead['lead_id'] = $lead_id;
 
-		// Branded PDF estimate with the visitor's illustration.
-		$pdf_path        = NSE_Pdf::create( $lead_id, $lead, $c, isset( $p['illustration'] ) ? $p['illustration'] : '' );
+		// Branded PDF estimate with the visitor's illustration. A PDF problem never blocks the lead or its emails.
+		$pdf_path = '';
+		try {
+			$pdf_path = NSE_Pdf::create( $lead_id, $lead, $c, isset( $p['illustration'] ) ? $p['illustration'] : '' );
+		} catch ( Throwable $e ) {
+			NSE_Pdf::log( $e );
+		}
 		$lead['pdf_url'] = $pdf_path ? NSE_Pdf::url( $lead_id ) : '';
 		update_post_meta( $lead_id, self::META_KEY, $lead );
 
-		self::notify( $c, $lead, $pdf_path );
+		try {
+			self::notify( $c, $lead, $pdf_path );
+		} catch ( Throwable $e ) {
+			NSE_Pdf::log( $e );
+		}
 		if ( $pdf_path ) {
-			self::email_customer( $c, $lead, $pdf_path );
+			try {
+				self::email_customer( $c, $lead, $pdf_path );
+			} catch ( Throwable $e ) {
+				NSE_Pdf::log( $e );
+			}
 		}
 
 		return rest_ensure_response(

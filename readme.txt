@@ -2,7 +2,7 @@
 Contributors: novoslate
 Requires at least: 6.0
 Requires PHP: 7.4
-Stable tag: 1.6.0
+Stable tag: 1.6.1
 License: GPLv2 or later
 
 Instant price estimators with lead capture for contractors.
@@ -86,6 +86,12 @@ Suggested Google Ads tracking template:
 Disable capture with: add_filter( 'pe_capture_attribution', '__return_false' );
 
 == Changelog ==
+= 1.6.1 =
+* Fix: quote submissions failed with a critical error in 1.6.0 (an admin-only WordPress function was used while building the PDF).
+* A PDF problem can no longer block a lead or its emails. Problems are written to the PHP error log instead.
+* Visitors see a friendly message instead of raw HTML if the server ever returns an error.
+* Settings page shows "Settings saved", and the logo preview uses the accent color like the PDF.
+
 = 1.6.0 =
 * Branded PDF estimates with the project illustration, emailed to the customer and attached to the lead email.
 * Download button on the confirmation screen and a PDF link on each lead.

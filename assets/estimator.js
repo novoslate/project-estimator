@@ -461,9 +461,13 @@
 						body: JSON.stringify(payload)
 					});
 				})
-				.then(function (r) { return r.json().then(function (j) { return { ok: r.ok, j: j }; }); })
+				.then(function (r) { return r.json().catch(function () { return {}; }).then(function (j) { return { ok: r.ok, j: j }; }); })
 				.then(function (res) {
-					if (!res.ok || !res.j.ok) throw new Error(res.j && res.j.message ? res.j.message : '');
+					if (!res.ok || !res.j.ok) {
+						var msg = res.j && res.j.message ? String(res.j.message) : '';
+						/* Server crashes come back as HTML; never show that to visitors. */
+						throw new Error(/[<>]/.test(msg) || msg.length > 200 ? '' : msg);
+					}
 					form.hidden = true;
 					var o = opts[state.opt];
 					var picked = addons.filter(function (a, i) { return state.addons[i]; }).map(function (a) { return a.name; });

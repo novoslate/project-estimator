@@ -52,6 +52,13 @@ class NSE_Pdf {
 		return add_query_arg( 'key', self::key( $lead_id ), rest_url( 'nse/v1/estimate/' . (int) $lead_id ) );
 	}
 
+	/**
+	 * Record PDF problems in the PHP error log (and debug.log when WP_DEBUG_LOG is on) without breaking the request.
+	 */
+	public static function log( $e ) {
+		error_log( 'Project Estimator PDF: ' . ( $e instanceof Throwable ? $e->getMessage() . ' in ' . basename( $e->getFile() ) . ':' . $e->getLine() : (string) $e ) ); // phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_error_log
+	}
+
 	public static function delete_for_lead( $post_id ) {
 		if ( 'nse_lead' !== get_post_type( $post_id ) ) {
 			return;
@@ -100,6 +107,13 @@ class NSE_Pdf {
 	/* ---------- Images ---------- */
 
 	/**
+	 * Temp file path. wp_tempnam() only exists in wp-admin, so it can't be used during form submissions.
+	 */
+	private static function temp_path( $prefix, $ext ) {
+		return trailingslashit( get_temp_dir() ) . $prefix . '-' . wp_generate_password( 16, false, false ) . '.' . $ext;
+	}
+
+	/**
 	 * Validate the browser's illustration (base64 JPEG) and write a clean copy to a temp file.
 	 */
 	public static function illustration_file( $b64 ) {
@@ -118,7 +132,7 @@ class NSE_Pdf {
 		if ( ! $info || IMAGETYPE_JPEG !== $info[2] || $info[0] > 2400 || $info[1] > 2400 ) {
 			return '';
 		}
-		$tmp = wp_tempnam( 'pe-illustration' ) . '.jpg';
+		$tmp = self::temp_path( 'pe-illustration', 'jpg' );
 		if ( function_exists( 'imagecreatefromstring' ) ) {
 			/* Re-encode so only clean pixel data reaches the PDF. */
 			$im = @imagecreatefromstring( $bin ); // phpcs:ignore WordPress.PHP.NoSilencedErrors.Discouraged
@@ -153,7 +167,7 @@ class NSE_Pdf {
 					imagealphablending( $im, false );
 					imagesavealpha( $im, true );
 					imageinterlace( $im, false );
-					$tmp = wp_tempnam( 'pe-logo' ) . '.png';
+					$tmp = self::temp_path( 'pe-logo', 'png' );
 					imagepng( $im, $tmp );
 					imagedestroy( $im );
 					return $tmp;
@@ -166,7 +180,7 @@ class NSE_Pdf {
 			$im = @imagecreatefromstring( file_get_contents( $path ) ); // phpcs:ignore
 			if ( $im ) {
 				imagesavealpha( $im, true );
-				$tmp = wp_tempnam( 'pe-logo' ) . '.png';
+				$tmp = self::temp_path( 'pe-logo', 'png' );
 				imagepng( $im, $tmp );
 				imagedestroy( $im );
 				return $tmp;
@@ -191,8 +205,9 @@ class NSE_Pdf {
 
 		try {
 			$bytes = self::build( $lead, $c, NSE_Settings::resolve_design( $c ), $img, $logo );
-		} catch ( Exception $e ) {
+		} catch ( Throwable $e ) {
 			$bytes = '';
+			self::log( $e );
 		}
 		foreach ( $temp as $t ) {
 			wp_delete_file( $t );
@@ -271,7 +286,7 @@ class NSE_Pdf {
 				$w    = $size ? min( 70, $h * $size[0] / max( 1, $size[1] ) ) : 40;
 				$h    = $size ? $w * $size[1] / max( 1, $size[0] ) : $h;
 				$pdf->Image( $logo, 16, 15 - $h / 2, $w, $h );
-			} catch ( Exception $e ) {
+			} catch ( Throwable $e ) {
 				$logo = '';
 			}
 		}

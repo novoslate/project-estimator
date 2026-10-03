@@ -324,7 +324,7 @@ class NSE_Settings {
 
 		echo '<div class="wrap"><h1>Estimator settings</h1>';
 		echo '<p>These defaults apply to every estimator. Each estimator can override them in its own settings.</p>';
-		settings_errors( self::OPTION );
+		settings_errors();
 		echo '<form method="post" action="options.php">';
 		settings_fields( 'pe_settings' );
 
@@ -354,9 +354,10 @@ class NSE_Settings {
 		echo '<p>When someone requests a quote, a branded PDF with their selections, price range, and project illustration is created for the lead.</p>';
 		echo '<table class="form-table" role="presentation">';
 		printf(
-			'<tr><th scope="row">Logo</th><td><input type="hidden" id="pe-logo-id" name="%s" value="%d"><div id="pe-logo-preview" style="margin-bottom:8px">%s</div><button type="button" class="button" id="pe-logo-pick">Choose logo</button> <button type="button" class="button-link" id="pe-logo-remove"%s>Remove</button><p class="description">Shown at the top of the PDF on the accent color band. A PNG with a transparent background works best.</p></td></tr>',
+			'<tr><th scope="row">Logo</th><td><input type="hidden" id="pe-logo-id" name="%s" value="%d"><div id="pe-logo-preview" style="margin-bottom:8px;display:inline-flex;align-items:center;min-height:60px;min-width:120px;padding:12px 18px;border-radius:6px;background:%s">%s</div><br><button type="button" class="button" id="pe-logo-pick">Choose logo</button> <button type="button" class="button-link" id="pe-logo-remove"%s>Remove</button><p class="description">Shown at the top of the PDF on the accent color band. A PNG with a transparent background works best. The preview shows it on the current accent color.</p></td></tr>',
 			self::name( 'logo_id' ), // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- escaped in name().
 			(int) $s['logo_id'],
+			esc_attr( $d['accent'] ),
 			$logo ? '<img src="' . esc_url( $logo ) . '" style="max-height:60px;max-width:220px" alt="">' : '',
 			$logo ? '' : ' style="display:none"'
 		);
