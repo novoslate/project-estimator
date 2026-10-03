@@ -272,20 +272,21 @@ class NSE_Pdf {
 		$pdf->SetAuthor( $biz['name'], true );
 		$pdf->SetMargins( 16, 16, 16 );
 		$pdf->SetAutoPageBreak( true, 18 );
+		$pdf->set_cell_padding( 0 );
 		$pdf->AddPage();
 		$W = $pdf->GetPageWidth() - 32;
 
 		/* Header band */
 		$pdf->SetFillColor( $accent[0], $accent[1], $accent[2] );
-		$pdf->Rect( 0, 0, $pdf->GetPageWidth(), 30, 'F' );
+		$pdf->Rect( 0, 0, $pdf->GetPageWidth(), 26, 'F' );
 		$right_x = 16;
 		if ( $logo ) {
 			try {
 				$size = @getimagesize( $logo ); // phpcs:ignore WordPress.PHP.NoSilencedErrors.Discouraged
-				$h    = 16;
+				$h    = 14;
 				$w    = $size ? min( 70, $h * $size[0] / max( 1, $size[1] ) ) : 40;
 				$h    = $size ? $w * $size[1] / max( 1, $size[0] ) : $h;
-				$pdf->Image( $logo, 16, 15 - $h / 2, $w, $h );
+				$pdf->Image( $logo, 16, 13 - $h / 2, $w, $h );
 			} catch ( Throwable $e ) {
 				$logo = '';
 			}
@@ -293,23 +294,23 @@ class NSE_Pdf {
 		$pdf->SetTextColor( $on[0], $on[1], $on[2] );
 		$contact_line = self::t( implode( '   ', array_filter( array( $biz['phone'], $site ) ) ) );
 		if ( $logo ) {
-			$pdf->SetXY( 16, 9.5 );
+			$pdf->SetXY( 16, 7.5 );
 			$pdf->SetFont( 'Helvetica', 'B', 11 );
 			$pdf->Cell( $W, 6, self::t( $biz['name'] ), 0, 2, 'R' );
 			$pdf->SetFont( 'Helvetica', '', 10 );
 			$pdf->Cell( $W, 5, $contact_line, 0, 2, 'R' );
 		} else {
 			/* No logo: business name on the left, contact details on the right, both centered in the band. */
-			$pdf->SetXY( 16, 11 );
+			$pdf->SetXY( 16, 9 );
 			$pdf->SetFont( 'Helvetica', 'B', 16 );
 			$pdf->Cell( $W / 2, 8, self::t( $biz['name'] ) );
-			$pdf->SetXY( 16, 12 );
+			$pdf->SetXY( 16, 10 );
 			$pdf->SetFont( 'Helvetica', '', 10 );
 			$pdf->Cell( $W, 6, $contact_line, 0, 2, 'R' );
 		}
 
 		/* Title */
-		$pdf->SetXY( 16, 40 );
+		$pdf->SetXY( 16, 35 );
 		$pdf->SetTextColor( $ink[0], $ink[1], $ink[2] );
 		$pdf->SetFont( 'Helvetica', 'B', 20 );
 		$pdf->Cell( $W, 9, self::t( 'Your ' . strtolower( $lead['project'] ) . ' estimate' ), 0, 1 );
@@ -318,12 +319,12 @@ class NSE_Pdf {
 		$pdf->Cell( $W, 6, self::t( 'Prepared for ' . $lead['name'] . '   |   ' . date_i18n( 'F j, Y' ) . '   |   Estimate #' . $lead['lead_id'] ), 0, 1 );
 
 		/* Price box */
-		$y = $pdf->GetY() + 5;
+		$y = $pdf->GetY() + 4;
 		$pdf->SetFillColor( $soft[0], $soft[1], $soft[2] );
-		$pdf->Rect( 16, $y, $W, 24, 'F' );
+		$pdf->Rect( 16, $y, $W, 21, 'F' );
 		$pdf->SetFillColor( $accent[0], $accent[1], $accent[2] );
-		$pdf->Rect( 16, $y, 1.6, 24, 'F' );
-		$pdf->SetXY( 22, $y + 4 );
+		$pdf->Rect( 16, $y, 1.6, 21, 'F' );
+		$pdf->SetXY( 22, $y + 3.5 );
 		$pdf->SetFont( 'Helvetica', '', 10 );
 		$pdf->SetTextColor( $muted[0], $muted[1], $muted[2] );
 		$pdf->Cell( $W - 10, 5, self::t( 'Estimated price range' ), 0, 2 );
@@ -332,25 +333,25 @@ class NSE_Pdf {
 		if ( array_sum( $accent ) > 600 ) {
 			$pdf->SetTextColor( $ink[0], $ink[1], $ink[2] ); // Very light accents are hard to read on white.
 		}
-		$pdf->Cell( $W - 10, 11, self::t( self::money( $lead['estimate_low'] ) . ' to ' . self::money( $lead['estimate_high'] ) ), 0, 2 );
-		$pdf->SetY( $y + 28 );
+		$pdf->Cell( $W - 10, 10, self::t( self::money( $lead['estimate_low'] ) . ' to ' . self::money( $lead['estimate_high'] ) ), 0, 2 );
+		$pdf->SetY( $y + 25 );
 
-		/* Illustration */
+		/* Illustration: full content width, aligned with the margins */
 		if ( $img ) {
 			$size = @getimagesize( $img ); // phpcs:ignore WordPress.PHP.NoSilencedErrors.Discouraged
 			$iw   = $W;
-			$ih   = $size ? $iw * $size[1] / max( 1, $size[0] ) : $iw * 0.65;
-			if ( $ih > 86 ) {
-				$ih = 86;
-				$iw = $size ? $ih * $size[0] / max( 1, $size[1] ) : $W;
+			$ih   = $size ? $iw * $size[1] / max( 1, $size[0] ) : $iw * 0.525;
+			if ( $ih > 100 ) {
+				/* Older, taller images: keep full width by trimming top and bottom evenly. */
+				$ih = 100;
 			}
-			$x = 16 + ( $W - $iw ) / 2;
-			$pdf->Image( $img, $x, $pdf->GetY(), $iw, $ih, 'JPG' );
-			$pdf->SetY( $pdf->GetY() + $ih + 2 );
+			$y = $pdf->GetY();
+			self::image_cover( $pdf, $img, 16, $y, $iw, $ih, $size );
+			$pdf->SetY( $y + $ih + 2 );
 			$pdf->SetFont( 'Helvetica', 'I', 8 );
 			$pdf->SetTextColor( $muted[0], $muted[1], $muted[2] );
-			$pdf->Cell( $W, 4, self::t( 'Illustration for reference. Colors and details are finalized with you on site.' ), 0, 1, 'C' );
-			$pdf->Ln( 3 );
+			$pdf->Cell( $W, 4, self::t( 'Illustration for reference. Colors and details are finalized with you on site.' ), 0, 1, 'L' );
+			$pdf->Ln( 4 );
 		}
 
 		/* Two columns: project details and customer info */
@@ -378,15 +379,22 @@ class NSE_Pdf {
 		}
 		$end1 = self::section( $pdf, 16, $top, $col, 'Project details', $details, $accent, $ink, $muted );
 		$end2 = self::section( $pdf, 16 + $col + 10, $top, $col, 'Your information', $contact, $accent, $ink, $muted );
-		$pdf->SetY( max( $end1, $end2 ) + 4 );
+		$pdf->SetXY( 16, max( $end1, $end2 ) + 6 );
 
 		/* Next steps and fine print */
+		/* Keep the next steps block together: move it to a new page rather than strand the heading. */
+		$pdf->SetFont( 'Helvetica', '', 10 );
+		$need = 11 + 5 * max( 1, ceil( $pdf->GetStringWidth( self::t( $c['success_message'] ) ) / $W ) )
+			+ 4 * max( 1, ceil( $pdf->GetStringWidth( self::t( $c['disclaimer'] ) ) * 0.8 / $W ) ) + 6;
+		if ( $pdf->GetY() + $need > $pdf->GetPageHeight() - 18 ) {
+			$pdf->AddPage();
+		}
 		if ( ! empty( $c['success_message'] ) ) {
 			self::heading( $pdf, $W, 'Next steps', $accent, $ink );
 			$pdf->SetFont( 'Helvetica', '', 10 );
 			$pdf->SetTextColor( $ink[0], $ink[1], $ink[2] );
 			$pdf->MultiCell( $W, 5, self::t( $c['success_message'] ), 0, 'L' );
-			$pdf->Ln( 3 );
+			$pdf->Ln( 4 );
 		}
 		if ( ! empty( $c['disclaimer'] ) ) {
 			$pdf->SetFont( 'Helvetica', '', 8 );
@@ -397,14 +405,44 @@ class NSE_Pdf {
 		return $pdf->Output( 'S' );
 	}
 
+	/**
+	 * Fill a box with an image, trimming top and bottom evenly if the image is taller than the box.
+	 */
+	private static function image_cover( $pdf, $img, $x, $y, $w, $h, $size ) {
+		$natural = $size ? $w * $size[1] / max( 1, $size[0] ) : $h;
+		if ( $natural <= $h + 0.5 || ! function_exists( 'imagecreatefromjpeg' ) ) {
+			$pdf->Image( $img, $x, $y, $w, min( $h, $natural ), 'JPG' );
+			return;
+		}
+		$src = @imagecreatefromjpeg( $img ); // phpcs:ignore WordPress.PHP.NoSilencedErrors.Discouraged
+		if ( ! $src ) {
+			$pdf->Image( $img, $x, $y, $w, $h, 'JPG' );
+			return;
+		}
+		$keep = (int) round( $size[1] * $h / $natural );
+		$top  = (int) round( ( $size[1] - $keep ) / 2 );
+		$crop = imagecrop( $src, array( 'x' => 0, 'y' => $top, 'width' => $size[0], 'height' => $keep ) );
+		imagedestroy( $src );
+		if ( ! $crop ) {
+			$pdf->Image( $img, $x, $y, $w, $h, 'JPG' );
+			return;
+		}
+		imagejpeg( $crop, $img, 90 );
+		imagedestroy( $crop );
+		$pdf->Image( $img, $x, $y, $w, $h, 'JPG' );
+	}
+
 	private static function heading( $pdf, $w, $label, $accent, $ink ) {
+		$x = $pdf->GetX();
 		$pdf->SetFont( 'Helvetica', 'B', 11 );
 		$pdf->SetTextColor( $ink[0], $ink[1], $ink[2] );
-		$pdf->Cell( $w, 6, self::t( $label ), 0, 1 );
+		$pdf->Cell( $w, 5, self::t( $label ), 0, 1 );
+		/* Underline: 2 mm below the text, starting exactly where the text starts. */
+		$y = $pdf->GetY() + 2;
 		$pdf->SetDrawColor( $accent[0], $accent[1], $accent[2] );
-		$pdf->SetLineWidth( 0.5 );
-		$pdf->Line( $pdf->GetX(), $pdf->GetY(), $pdf->GetX() + 12, $pdf->GetY() );
-		$pdf->Ln( 3 );
+		$pdf->SetLineWidth( 0.6 );
+		$pdf->Line( $x, $y, $x + 12, $y );
+		$pdf->SetXY( $x, $y + 4 );
 	}
 
 	/**
@@ -421,10 +459,10 @@ class NSE_Pdf {
 			$pdf->SetX( $x );
 			$pdf->SetFont( 'Helvetica', '', 9 );
 			$pdf->SetTextColor( $muted[0], $muted[1], $muted[2] );
-			$pdf->Cell( 22, 5.5, self::t( $label ) );
+			$pdf->Cell( 24, 5.5, self::t( $label ) );
 			$pdf->SetFont( 'Helvetica', '', 10 );
 			$pdf->SetTextColor( $ink[0], $ink[1], $ink[2] );
-			$pdf->MultiCell( $w - 22, 5.5, self::t( $val ), 0, 'L' );
+			$pdf->MultiCell( $w - 24, 5.5, self::t( $val ), 0, 'L' );
 		}
 		$end = $pdf->GetY();
 		$pdf->SetLeftMargin( 16 );

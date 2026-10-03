@@ -3,7 +3,7 @@
 	'use strict';
 	var NS = 'http://www.w3.org/2000/svg';
 	var COS = Math.cos(Math.PI / 6), SIN = 0.5;
-	var VW = 400, VH = 260;
+	var VW = 400, VH = 260; // VH can be changed per render (opts.height), for example a wider frame for the PDF.
 
 	/* Face colors: [top, left (+y), right (+x)] */
 	var ALU = ['#FBFBF8', '#E6E5DF', '#CFCEC6'];
@@ -553,10 +553,12 @@
 	/* ---------- Public entry ---------- */
 
 	/**
-	 * opts: { scene, variant, dims: [w, d] or [len], max: [w, d] or [len], features: [], color: '#RRGGBB' }
+	 * opts: { scene, variant, dims: [w, d] or [len], max: [w, d] or [len], features: [], color: '#RRGGBB', height: 260 }
+	 * The frame is 400 wide; height sets its shape (260 on the page, 210 for the wide PDF image).
 	 */
 	function render(svg, opts) {
 		while (svg.firstChild) svg.removeChild(svg.firstChild);
+		VH = opts.height ? Math.max(160, Math.min(320, Number(opts.height))) : 260;
 		svg.setAttribute('viewBox', '0 0 ' + VW + ' ' + VH);
 		var sc = new Scene(svg);
 		tint = /^#[0-9a-f]{6}$/i.test(opts.color || '') ? opts.color : null;
@@ -588,7 +590,7 @@
 		backdrop(sc);
 		var wins = [x0 + 1];
 		if (x1 - W > 6) wins.push(W + 1.5);
-		house(sc, x0 - 20, x1 + 20, { windows: wins, door: (attached || opts.scene === 'pergola') ? Math.max(0.5, W / 2 - 3) : undefined });
+		house(sc, x0 - 80, x1 + 80, { windows: wins, door: (attached || opts.scene === 'pergola') ? Math.max(0.5, W / 2 - 3) : undefined });
 
 		switch (opts.scene) {
 			case 'patio_cover': patioCover(sc, W, D, opts.variant, f); break;

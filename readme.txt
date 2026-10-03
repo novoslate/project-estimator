@@ -2,7 +2,7 @@
 Contributors: novoslate
 Requires at least: 6.0
 Requires PHP: 7.4
-Stable tag: 1.6.2
+Stable tag: 1.6.3
 License: GPLv2 or later
 
 Instant price estimators with lead capture for contractors.
@@ -88,6 +88,11 @@ Suggested Google Ads tracking template:
 Disable capture with: add_filter( 'pe_capture_attribution', '__return_false' );
 
 == Changelog ==
+= 1.6.3 =
+* PDF: the illustration spans the full content width, using a wider capture made for the page.
+* PDF: headings, underlines, and detail rows share one left edge, with consistent spacing under each heading.
+* PDF: tighter header and price box so long selections still fit on one page; "Next steps" never splits from its text.
+
 = 1.6.2 =
 * New "Website shown on PDF" setting for the PDF header and footer.
 * Better spacing around the PDF download button on the confirmation screen.

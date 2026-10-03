@@ -12,6 +12,14 @@ class NSE_Fpdf extends FPDF {
 	public $footer_txt = '';
 	public $muted      = array( 93, 111, 114 );
 
+	/**
+	 * Inner padding FPDF adds before text in every cell (default 1 mm).
+	 * Set to 0 so text lines up exactly with margins, rules, and images.
+	 */
+	public function set_cell_padding( $mm ) {
+		$this->cMargin = $mm;
+	}
+
 	// phpcs:ignore WordPress.NamingConventions.ValidFunctionName.MethodNameInvalid -- FPDF hook name.
 	public function Footer() {
 		$this->SetY( -13 );

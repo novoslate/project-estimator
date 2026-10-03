@@ -330,9 +330,12 @@
 				function finish(v) { if (!done) { done = true; resolve(v); } }
 				try {
 					if (!has3d()) return finish('');
-					var W = 1200, H = 780;
+					/* Wider frame than on screen so the PDF image spans the page width without taking the whole page. */
+					var W = 1600, H = 720;
 					var off = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
-					window.PEPreview.render(off, previewOpts());
+					var po = previewOpts();
+					po.height = 180;
+					window.PEPreview.render(off, po);
 					off.setAttribute('xmlns', 'http://www.w3.org/2000/svg');
 					off.setAttribute('width', W);
 					off.setAttribute('height', H);
