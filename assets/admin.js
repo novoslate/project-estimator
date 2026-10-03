@@ -292,6 +292,7 @@
 				select('Project address', 'fields.address', fieldChoices) +
 				select('Timeline', 'fields.timeline', fieldChoices) +
 				select('Project details', 'fields.notes', fieldChoices) +
+				select('Photos', 'fields.photos', fieldChoices) +
 				area('Timeline choices', 'timeline_choices', { lines: true, rows: 4, help: 'One per line.' }) +
 				'</div>',
 				'Name and phone are always required.') +

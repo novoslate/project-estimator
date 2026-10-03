@@ -2,7 +2,7 @@
 Contributors: novoslate
 Requires at least: 6.0
 Requires PHP: 7.4
-Stable tag: 1.12.0
+Stable tag: 1.13.0
 License: GPLv2 or later
 
 Instant price estimators with lead capture for contractors.
@@ -105,6 +105,16 @@ The illustration is captured in the visitor's browser when they submit. The serv
 
 Uses FPDF (lib/fpdf), which is free to use, modify, and distribute.
 
+== Customer photos ==
+Turn on Photos in an estimator's Quote form card (Hidden, Optional, or Required). Visitors can add up to 6 photos of their space from the camera roll or camera.
+
+* Photos are shrunk in the browser to 1600 px before upload (a 12 MB phone photo becomes a few hundred KB), which keeps uploads fast and well under hosting limits. This also removes hidden photo data such as GPS location.
+* The server keeps only real JPEG, PNG, or WebP images and re-saves each one as a clean JPEG.
+* Photos appear on the lead screen, are attached to the business lead email, fill a "Your photos" page in the PDF, and are included as links in the CRM webhook (photos) and the CSV export.
+* Photos are stored privately with random names and open only through signed links. Deleting a lead deletes its photos.
+
+New estimators from templates start with Photos set to Optional. Estimators saved before 1.13.0 keep Photos hidden until it is turned on.
+
 == Step by step layout ==
 The Layout design setting (site-wide under Estimators > Settings, or per estimator with a custom design) chooses how the estimator is shown:
 
@@ -149,6 +159,11 @@ Suggested Google Ads tracking template:
 Disable capture with: add_filter( 'pe_capture_attribution', '__return_false' );
 
 == Changelog ==
+= 1.13.0 =
+* Customer photo uploads (up to 6), shrunk in the browser with location data removed.
+* Photos on the lead screen, in the business email, on a PDF page, and as links in the webhook and CSV.
+* Photos field setting (Hidden, Optional, Required) per estimator.
+
 = 1.12.0 =
 * Step by step layout: one question per screen with a progress bar, auto-advance, and the 3D preview kept on screen. On by default for phones and narrow columns.
 * New Layout design setting (phones only, all screens, or single page).

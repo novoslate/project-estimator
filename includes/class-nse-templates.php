@@ -29,6 +29,7 @@ class NSE_Templates {
 					'address'  => 'off',
 					'timeline' => 'optional',
 					'notes'    => 'off',
+					'photos'   => 'optional',
 				),
 				'timeline_choices' => array( 'As soon as possible', 'In 1 to 3 months', 'In 3 to 6 months', 'Just pricing it out' ),
 				'projects'         => array(),

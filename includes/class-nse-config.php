@@ -160,8 +160,9 @@ class NSE_Config {
 		// Form fields. Name and phone are always required.
 		$f             = self::list_of( $c, 'fields' );
 		$out['fields'] = array();
-		foreach ( array( 'email', 'zip', 'address', 'timeline', 'notes' ) as $key ) {
-			$v                     = isset( $f[ $key ] ) ? $f[ $key ] : $d['fields'][ $key ];
+		foreach ( array( 'email', 'zip', 'address', 'timeline', 'notes', 'photos' ) as $key ) {
+			$fallback              = ( 'photos' === $key && isset( $c['fields'] ) ) ? 'off' : $d['fields'][ $key ]; // Saved before photos existed: keep the form unchanged.
+			$v                     = isset( $f[ $key ] ) ? $f[ $key ] : $fallback;
 			$out['fields'][ $key ] = in_array( $v, array( 'off', 'optional', 'required' ), true ) ? $v : 'off';
 		}
 

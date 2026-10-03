@@ -208,7 +208,7 @@ class NSE_Export {
 			'Lead ID', 'Submitted', 'Status', 'Booked value', 'Name', 'Phone', 'Email', 'ZIP', 'Address', 'Timeline', 'Notes',
 			'Estimator', 'Project', 'Style', 'Color', 'Size', 'Extras', 'Estimate low', 'Estimate high',
 			'Source', 'Campaign', 'Keyword', 'UTM source', 'UTM medium', 'UTM content', 'Campaign ID', 'Ad group ID', 'Match type', 'Device',
-			'GCLID', 'GBRAID', 'WBRAID', 'MSCLKID', 'FBCLID', 'Landing page', 'Referrer', 'Submitted from', 'PDF', 'reCAPTCHA score',
+			'GCLID', 'GBRAID', 'WBRAID', 'MSCLKID', 'FBCLID', 'Landing page', 'Referrer', 'Submitted from', 'PDF', 'reCAPTCHA score', 'Photos',
 		);
 		$rows = array( $head );
 		foreach ( $ids as $id ) {
@@ -265,6 +265,7 @@ class NSE_Export {
 				self::cell( $g( 'page' ) ),
 				NSE_Pdf::path_for( $id ) ? NSE_Pdf::url( $id ) : '',
 				isset( $l['recaptcha_score'] ) ? $l['recaptcha_score'] : '',
+				implode( "\n", NSE_Photos::urls( $id ) ),
 			);
 		}
 		return $rows;

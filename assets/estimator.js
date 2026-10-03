@@ -303,6 +303,83 @@
 		}
 		if (F.notes && F.notes !== 'off') formKids.push(field('notes', 'Anything we should know?', h('textarea', { rows: '3' }), F.notes, true));
 
+		/* Photos: shrunk in the browser before upload (also removes hidden data such as GPS location). */
+		var PHOTO_MAX = 6;
+		var photos = [], photoBusy = false, photoGrid = null, photoNote = null, photoAdd = null;
+		function shrinkPhoto(file) {
+			return new Promise(function (resolve, reject) {
+				var src = URL.createObjectURL(file);
+				var img = new Image();
+				img.onload = function () {
+					var w = img.naturalWidth, hgt = img.naturalHeight;
+					var sc = Math.min(1, 1600 / Math.max(w, hgt));
+					var cv = document.createElement('canvas');
+					cv.width = Math.max(1, Math.round(w * sc));
+					cv.height = Math.max(1, Math.round(hgt * sc));
+					var ctx = cv.getContext('2d');
+					ctx.fillStyle = '#FFFFFF';
+					ctx.fillRect(0, 0, cv.width, cv.height);
+					ctx.drawImage(img, 0, 0, cv.width, cv.height);
+					URL.revokeObjectURL(src);
+					cv.toBlob(function (blob) {
+						if (blob) resolve({ blob: blob, url: URL.createObjectURL(blob) });
+						else reject(new Error('read'));
+					}, 'image/jpeg', 0.82);
+				};
+				img.onerror = function () { URL.revokeObjectURL(src); reject(new Error('format')); };
+				img.src = src;
+			});
+		}
+		function renderPhotos() {
+			photoGrid.innerHTML = '';
+			photos.forEach(function (ph, i) {
+				photoGrid.appendChild(h('div', { class: 'nse-photo' }, [
+					h('img', { src: ph.url, alt: 'Photo ' + (i + 1) }),
+					h('button', { type: 'button', class: 'nse-photo-x', 'aria-label': 'Remove photo ' + (i + 1), text: '\u00D7', onclick: function () {
+						URL.revokeObjectURL(ph.url);
+						photos.splice(i, 1);
+						photoNote.textContent = '';
+						renderPhotos();
+					} })
+				]));
+			});
+			photoAdd.hidden = photos.length >= PHOTO_MAX;
+			photoAdd.lastChild.textContent = photos.length ? '+ Add more photos' : '+ Add photos';
+		}
+		function addPhotos(e) {
+			var files = Array.prototype.slice.call(e.target.files || []);
+			e.target.value = '';
+			if (!files.length) return;
+			var room = PHOTO_MAX - photos.length;
+			var over = files.length > room;
+			files = files.slice(0, Math.max(0, room));
+			var failed = 0;
+			photoBusy = true;
+			photoNote.textContent = 'Adding photos...';
+			files.reduce(function (chain, f) {
+				return chain.then(function () {
+					return shrinkPhoto(f).then(function (ph) { photos.push(ph); renderPhotos(); }, function () { failed++; });
+				});
+			}, Promise.resolve()).then(function () {
+				photoBusy = false;
+				var msg = [];
+				if (failed) msg.push(failed + (failed === 1 ? ' photo' : ' photos') + ' could not be read. Try a JPG or PNG.');
+				if (over) msg.push('You can add up to ' + PHOTO_MAX + ' photos.');
+				photoNote.textContent = msg.join(' ');
+			});
+		}
+		if (F.photos && F.photos !== 'off') {
+			var photoInput = h('input', { type: 'file', id: uid + '-photos', class: 'nse-photo-input', accept: 'image/*', multiple: true, onchange: addPhotos });
+			photoGrid = h('div', { class: 'nse-photo-grid' });
+			photoNote = h('p', { class: 'nse-photo-note', role: 'status' });
+			photoAdd = h('label', { for: uid + '-photos', class: 'nse-photo-add' }, [photoInput, h('span', { text: '+ Add photos' })]);
+			formKids.push(h('div', { class: 'nse-field nse-full nse-photos' }, [
+				h('span', { class: 'nse-photo-label', text: 'Photos of your space' + (F.photos === 'optional' ? ' (optional)' : '') }),
+				h('small', { class: 'nse-photo-hint', text: 'Up to ' + PHOTO_MAX + '. Photos help us price your project accurately.' }),
+				photoGrid, photoAdd, photoNote
+			]));
+		}
+
 		var hp = h('input', { type: 'text', name: 'website', tabindex: '-1', autocomplete: 'off' });
 		formKids.push(h('div', { class: 'nse-hp', 'aria-hidden': 'true' }, [hp]));
 		var err = h('p', { class: 'nse-err', role: 'alert' });
@@ -626,6 +703,8 @@
 			for (var k in labels) {
 				if (F[k] === 'required' && inputs[k] && !v(k)) return fail('Enter your ' + labels[k] + '.', k);
 			}
+			if (photoBusy) return fail('Your photos are still being added. One moment.');
+			if (F.photos === 'required' && !photos.length) return fail('Add at least one photo of your space.');
 
 			btn.disabled = true;
 			btn.textContent = 'Sending...';
@@ -650,6 +729,14 @@
 				})
 				.then(function (illustration) {
 					payload.illustration = illustration;
+					if (photos.length) {
+						/* With photos: the same fields as JSON in "payload", plus the image files. */
+						var fd = new FormData();
+						fd.append('payload', JSON.stringify(payload));
+						photos.forEach(function (ph, i) { fd.append('photos[]', ph.blob, 'photo-' + (i + 1) + '.jpg'); });
+						btn.textContent = 'Sending photos...';
+						return fetch(root.getAttribute('data-endpoint'), { method: 'POST', body: fd });
+					}
 					return fetch(root.getAttribute('data-endpoint'), {
 						method: 'POST',
 						headers: { 'Content-Type': 'application/json' },
@@ -669,7 +756,8 @@
 					var list = h('ul', {}, [
 						h('li', { text: proj.name + (o ? ': ' + o.name : '') + (colors[state.color] ? ' in ' + colors[state.color].name : '') + ', ' + num(qty()) + ' ' + unit }),
 						h('li', { text: picked.length ? 'Extras: ' + picked.join(', ') : 'No extras' }),
-						res.j.low ? h('li', { text: 'Estimate: ' + money(res.j.low) + ' to ' + money(res.j.high) }) : null
+						res.j.low ? h('li', { text: 'Estimate: ' + money(res.j.low) + ' to ' + money(res.j.high) }) : null,
+						res.j.photos ? h('li', { text: res.j.photos + (res.j.photos === 1 ? ' photo' : ' photos') + ' sent' + (res.j.photos_skipped ? ' (' + res.j.photos_skipped + ' could not be sent)' : '') }) : null
 					]);
 					done.appendChild(h('h4', { text: 'Request sent' }));
 					done.appendChild(h('p', { text: cfg.success_message }));

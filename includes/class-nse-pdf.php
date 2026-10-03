@@ -402,6 +402,31 @@ class NSE_Pdf {
 			$pdf->MultiCell( $W, 4, self::t( $c['disclaimer'] ), 0, 'L' );
 		}
 
+		/* Customer photos on their own page */
+		$photos = isset( $lead['lead_id'] ) ? NSE_Photos::paths( $lead['lead_id'] ) : array();
+		if ( $photos ) {
+			$pdf->AddPage();
+			$pdf->SetXY( 16, 18 );
+			self::heading( $pdf, $W, 'Your photos', $accent, $ink );
+			$gap  = 6;
+			$cw   = ( $W - $gap ) / 2;
+			$ch   = 68;
+			$top  = $pdf->GetY();
+			foreach ( array_slice( $photos, 0, NSE_Photos::MAX ) as $i => $ph ) {
+				$x = 16 + ( $i % 2 ) * ( $cw + $gap );
+				$y = $top + floor( $i / 2 ) * ( $ch + $gap );
+				/* Crop each photo to fill its cell so the grid is even. */
+				$tmp = self::cover_copy( $ph, $cw / $ch );
+				$pdf->Image( $tmp ? $tmp : $ph, $x, $y, $cw, $ch, 'JPG' );
+				if ( $tmp ) {
+					wp_delete_file( $tmp );
+				}
+				$pdf->SetDrawColor( 213, 220, 219 );
+				$pdf->SetLineWidth( 0.2 );
+				$pdf->Rect( $x, $y, $cw, $ch );
+			}
+		}
+
 		return $pdf->Output( 'S' );
 	}
 
@@ -430,6 +455,37 @@ class NSE_Pdf {
 		imagejpeg( $crop, $img, 90 );
 		imagedestroy( $crop );
 		$pdf->Image( $img, $x, $y, $w, $h, 'JPG' );
+	}
+
+	/**
+	 * Temporary JPEG cropped from the center to an aspect ratio (width / height), or '' without GD.
+	 */
+	private static function cover_copy( $path, $ratio ) {
+		if ( ! function_exists( 'imagecreatefromjpeg' ) ) {
+			return '';
+		}
+		$src = @imagecreatefromjpeg( $path ); // phpcs:ignore WordPress.PHP.NoSilencedErrors.Discouraged
+		if ( ! $src ) {
+			return '';
+		}
+		$w = imagesx( $src );
+		$h = imagesy( $src );
+		if ( $w / $h > $ratio ) {
+			$cw = (int) round( $h * $ratio );
+			$box = array( 'x' => (int) ( ( $w - $cw ) / 2 ), 'y' => 0, 'width' => $cw, 'height' => $h );
+		} else {
+			$chh = (int) round( $w / $ratio );
+			$box = array( 'x' => 0, 'y' => (int) ( ( $h - $chh ) / 2 ), 'width' => $w, 'height' => $chh );
+		}
+		$crop = imagecrop( $src, $box );
+		imagedestroy( $src );
+		if ( ! $crop ) {
+			return '';
+		}
+		$tmp = self::temp_path( 'pe-photo-crop', 'jpg' );
+		imagejpeg( $crop, $tmp, 85 );
+		imagedestroy( $crop );
+		return $tmp;
 	}
 
 	private static function heading( $pdf, $w, $label, $accent, $ink ) {

@@ -87,6 +87,10 @@ class NSE_Leads {
 
 	public static function submit( WP_REST_Request $req ) {
 		$p = $req->get_json_params();
+		if ( ! is_array( $p ) && is_string( $req->get_param( 'payload' ) ) ) {
+			// Requests with photos arrive as multipart form data: JSON fields in "payload" plus image files.
+			$p = json_decode( $req->get_param( 'payload' ), true );
+		}
 		if ( ! is_array( $p ) ) {
 			return self::fail( 'Something went wrong. Please try again.' );
 		}
@@ -165,6 +169,16 @@ class NSE_Leads {
 			}
 		}
 
+		// Photos.
+		$photo_uploads = array();
+		$photo_skipped = 0;
+		if ( 'off' !== $f['photos'] ) {
+			list( $photo_uploads, $photo_skipped ) = NSE_Photos::validate( NSE_Photos::from_request( $req ) );
+			if ( 'required' === $f['photos'] && ! $photo_uploads ) {
+				return self::fail( 'Add at least one photo of your space.' );
+			}
+		}
+
 		// Recompute the estimate on the server so the stored range can't be tampered with.
 		$pi   = isset( $p['project'] ) ? absint( $p['project'] ) : 0;
 		$pi   = isset( $c['projects'][ $pi ] ) ? $pi : 0;
@@ -231,6 +245,11 @@ class NSE_Leads {
 		update_post_meta( $lead_id, self::META_KEY, $lead );
 		update_post_meta( $lead_id, '_nse_estimator_id', $id );
 		NSE_Status::set( $lead_id, 'new' );
+		if ( $photo_uploads ) {
+			NSE_Photos::store( $lead_id, $photo_uploads );
+			$lead['photos'] = NSE_Photos::urls( $lead_id );
+			update_post_meta( $lead_id, self::META_KEY, $lead );
+		}
 		if ( ! empty( $attr['gclid'] ) ) {
 			update_post_meta( $lead_id, '_pe_gclid', $attr['gclid'] );
 		}
@@ -269,6 +288,8 @@ class NSE_Leads {
 			array(
 				'ok'      => true,
 				'lead_id' => $lead_id,
+				'photos'  => isset( $lead['photos'] ) ? count( $lead['photos'] ) : 0,
+				'photos_skipped' => $photo_skipped,
 				'pdf_url' => $lead['pdf_url'],
 				'low'     => $est['low'],
 				'high'    => $est['high'],
@@ -336,6 +357,12 @@ class NSE_Leads {
 		}
 		$settings    = NSE_Settings::get();
 		$attachments = ( $pdf_path && $settings['pdf']['attach_business'] ) ? array( $pdf_path ) : array();
+		$photo_paths = NSE_Photos::paths( $lead['lead_id'] );
+		if ( $photo_paths ) {
+			$lines[] = '';
+			$lines[] = count( $photo_paths ) . ' customer ' . ( 1 === count( $photo_paths ) ? 'photo' : 'photos' ) . ' attached.';
+			$attachments = array_merge( $attachments, $photo_paths );
+		}
 		wp_mail( $rcpt['to'], 'New ' . strtolower( $lead['project'] ) . ' quote request: ' . $lead['name'], implode( "\n", $lines ), $headers, $attachments );
 
 	}
@@ -436,6 +463,7 @@ class NSE_Leads {
 			'Color'          => isset( $lead['color'] ) ? $lead['color'] : '',
 			'Size'           => $lead['measurements'] . ' (' . $lead['quantity'] . ')',
 			'Extras'         => $lead['extras'] ? implode( ', ', $lead['extras'] ) : 'None',
+			'Photos'         => ! empty( $lead['photos'] ) ? count( $lead['photos'] ) . ' (see Customer photos)' : '',
 			'Estimate shown' => self::money( $lead['estimate_low'] ) . ' to ' . self::money( $lead['estimate_high'] ),
 			'Page'           => $lead['page'],
 			'Submitted'      => $lead['submitted'],
