@@ -1,0 +1,23 @@
+#nse-editor .nse-card { background: #fff; border: 1px solid #dcdcde; border-radius: 6px; padding: 16px 18px; margin: 0 0 16px; }
+#nse-editor .nse-card h3 { margin: 0 0 6px; font-size: 14px; }
+#nse-editor .nse-card > .description { margin: 0 0 12px; }
+#nse-editor .nse-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 12px 16px; margin-bottom: 12px; }
+#nse-editor .nse-f { display: flex; flex-direction: column; gap: 4px; }
+#nse-editor .nse-f > span { font-weight: 600; font-size: 12px; }
+#nse-editor .nse-f em { font-size: 12px; color: #646970; font-style: normal; }
+#nse-editor .nse-wide { grid-column: 1 / -1; }
+#nse-editor .nse-f input, #nse-editor .nse-f select, #nse-editor .nse-f textarea { width: 100%; max-width: none; }
+#nse-editor .nse-f input[type=color] { width: 64px; height: 32px; padding: 2px; }
+#nse-editor .nse-row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; margin-bottom: 6px; }
+#nse-editor .nse-table { width: 100%; border-collapse: collapse; }
+#nse-editor .nse-table th { text-align: left; font-size: 12px; padding: 4px 6px; color: #50575e; }
+#nse-editor .nse-table td { padding: 4px 6px; vertical-align: middle; }
+#nse-editor .nse-table input[type=text], #nse-editor .nse-table input[type=number] { width: 100%; }
+#nse-editor .nse-table input[type=number] { max-width: 110px; }
+#nse-editor .nse-c { text-align: center; }
+#nse-editor .nse-del { color: #b32d2e; }
+@media (max-width: 782px) {
+	#nse-editor .nse-table thead { display: none; }
+	#nse-editor .nse-table tr { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; padding: 8px 0; border-bottom: 1px solid #f0f0f1; }
+	#nse-editor .nse-table input[type=number] { max-width: none; }
+}

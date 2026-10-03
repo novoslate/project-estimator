@@ -1,0 +1,36 @@
+name: Release
+
+# Push a tag like v1.0.1 and this builds project-estimator.zip and attaches it to a GitHub release.
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Check version matches tag
+        run: |
+          TAG="${GITHUB_REF_NAME#v}"
+          HEADER=$(grep -oP "^\s*\*\s*Version:\s*\K[0-9.]+" project-estimator.php)
+          if [ "$TAG" != "$HEADER" ]; then
+            echo "Tag v$TAG does not match plugin Version: $HEADER"; exit 1
+          fi
+
+      - name: Build zip
+        run: |
+          mkdir -p build/project-estimator
+          rsync -a --exclude-from=.distignore ./ build/project-estimator/
+          cd build && zip -rq project-estimator.zip project-estimator
+
+      - name: Publish release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: build/project-estimator.zip
+          generate_release_notes: true
