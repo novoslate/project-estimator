@@ -2,7 +2,7 @@
 /**
  * Plugin Name:       Project Estimator
  * Description:       Instant price estimators with lead capture. Includes templates for patio covers, landscaping, artificial turf, pavers, and fencing.
- * Version:           1.13.0
+ * Version:           1.14.0
  * Author:            Novoslate
  * Author URI:        https://novoslate.com
  * Text Domain:       project-estimator
@@ -16,7 +16,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-define( 'NSE_VERSION', '1.13.0' );
+define( 'NSE_VERSION', '1.14.0' );
 define( 'NSE_PATH', plugin_dir_path( __FILE__ ) );
 define( 'NSE_URL', plugin_dir_url( __FILE__ ) );
 
@@ -44,6 +44,7 @@ require_once NSE_PATH . 'includes/class-nse-webhook.php';
 require_once NSE_PATH . 'includes/class-nse-stats.php';
 require_once NSE_PATH . 'includes/class-nse-dashboard.php';
 require_once NSE_PATH . 'includes/class-nse-transfer.php';
+require_once NSE_PATH . 'includes/class-nse-elementor.php';
 
 // Updates from GitHub releases.
 require_once NSE_PATH . 'lib/plugin-update-checker/plugin-update-checker.php';
@@ -71,6 +72,17 @@ NSE_Webhook::init();
 NSE_Stats::init();
 NSE_Dashboard::init();
 NSE_Transfer::init();
+
+// Elementor widget, only when Elementor is active.
+add_action(
+	'plugins_loaded',
+	function () {
+		if ( did_action( 'elementor/loaded' ) ) {
+			NSE_Elementor::init();
+		}
+	},
+	20
+);
 
 register_activation_hook(
 	__FILE__,

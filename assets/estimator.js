@@ -704,6 +704,7 @@
 				if (F[k] === 'required' && inputs[k] && !v(k)) return fail('Enter your ' + labels[k] + '.', k);
 			}
 			if (photoBusy) return fail('Your photos are still being added. One moment.');
+			if (root.getAttribute('data-preview')) return fail('Preview only: quote requests are turned off in the Elementor editor. View the published page to test.');
 			if (F.photos === 'required' && !photos.length) return fail('Add at least one photo of your space.');
 
 			btn.disabled = true;
@@ -788,10 +789,37 @@
 		update();
 	}
 
+	/* Start an estimator once, even if several loaders see it. */
+	function start(el) {
+		if (!el || el.__peStarted || !el.getAttribute('data-config')) return;
+		el.__peStarted = true;
+		init(el);
+	}
 	function boot() {
 		var els = document.querySelectorAll('.nse[data-config]');
-		for (var i = 0; i < els.length; i++) init(els[i]);
+		for (var i = 0; i < els.length; i++) start(els[i]);
 	}
 	if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot);
 	else boot();
+
+	/* For page builders and anything else that adds an estimator after the page loads. */
+	window.ProjectEstimator = { start: start, boot: boot };
+
+	/* Elementor: widgets are added and re-rendered in the editor without a page load. */
+	function hookElementor() {
+		if (!window.elementorFrontend || !window.elementorFrontend.hooks) return false;
+		window.elementorFrontend.hooks.addAction('frontend/element_ready/project_estimator.default', function ($scope) {
+			var host = $scope && $scope[0] ? $scope[0] : null;
+			if (host) start(host.querySelector('.nse[data-config]'));
+		});
+		return true;
+	}
+	if (!hookElementor() && window.jQuery) {
+		window.jQuery(window).on('elementor/frontend/init', hookElementor);
+	}
+	/* Safety net in the editor preview, where widgets are swapped in and out as settings change. */
+	var inEditor = (document.body && /\belementor-editor-(active|preview)\b/.test(document.body.className)) || !!document.querySelector('.nse[data-preview]');
+	if (inEditor && window.MutationObserver) {
+		new MutationObserver(function () { boot(); }).observe(document.body, { childList: true, subtree: true });
+	}
 })();

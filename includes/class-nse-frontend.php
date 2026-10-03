@@ -31,8 +31,17 @@ class NSE_Frontend {
 	}
 
 	public static function shortcode( $atts ) {
-		$atts = shortcode_atts( array( 'id' => 0 ), $atts, 'project_estimator' );
-		$id   = absint( $atts['id'] );
+		$atts = shortcode_atts( array( 'id' => 0, 'layout' => '' ), $atts, 'project_estimator' );
+		return self::render( absint( $atts['id'] ), array( 'layout' => $atts['layout'] ) );
+	}
+
+	/**
+	 * Estimator markup, shared by the shortcode and the Elementor widget.
+	 *
+	 * @param int   $id   Estimator ID.
+	 * @param array $args layout: '', 'mobile', 'always', or 'single' to override the estimator's design setting.
+	 */
+	public static function render( $id, array $args = array() ) {
 		$post = $id ? get_post( $id ) : null;
 
 		if ( ! $post || 'nse_estimator' !== $post->post_type || 'publish' !== $post->post_status ) {
@@ -44,17 +53,27 @@ class NSE_Frontend {
 		}
 		wp_enqueue_style( 'nse-estimator' );
 		wp_enqueue_script( 'nse-estimator' );
-		$rc_url = NSE_Recaptcha::script_url();
+
+		/* In the Elementor editor the form is a preview: no reCAPTCHA, no tracking, no submissions. */
+		$editor = class_exists( 'NSE_Elementor' ) && NSE_Elementor::is_editor();
+		$rc_url = $editor ? '' : NSE_Recaptcha::script_url();
 		if ( $rc_url ) {
 			// Only pages with an estimator load Google's script.
 			wp_enqueue_script( 'pe-recaptcha', $rc_url, array(), null, array( 'in_footer' => true, 'strategy' => 'async' ) ); // phpcs:ignore WordPress.WP.EnqueuedResourceParameters.MissingVersion -- Google's URL must not get a version query.
 		}
 
 		$config = NSE_Config::public_config( NSE_Config::get( $id ) );
+		$layout = isset( $args['layout'] ) ? sanitize_key( $args['layout'] ) : '';
+		if ( isset( NSE_Settings::choices()['layout'][ $layout ] ) ) {
+			$config['design']['layout'] = $layout;
+		}
+		if ( $editor ) {
+			$config['recaptcha'] = null;
+		}
 		$design = $config['design'];
 
 		return sprintf(
-			'<div class="%s" style="%s" data-id="%d" data-name="%s" data-ts="%d" data-endpoint="%s" data-track="%s" data-config="%s"><noscript>Turn on JavaScript to use the price estimator.</noscript></div>',
+			'<div class="%s" style="%s" data-id="%d" data-name="%s" data-ts="%d" data-endpoint="%s" data-track="%s"%s data-config="%s"><noscript>Turn on JavaScript to use the price estimator.</noscript></div>',
 			esc_attr( NSE_Settings::css_classes( $design ) ),
 			esc_attr( NSE_Settings::css_vars( $design ) ),
 			$id,
@@ -62,7 +81,8 @@ class NSE_Frontend {
 			time(),
 			esc_url( rest_url( 'nse/v1/lead' ) ),
 			/* Editors and admins previewing their own site are not counted in the dashboard. */
-			current_user_can( 'edit_posts' ) ? '' : esc_url( rest_url( 'nse/v1/track' ) ),
+			( $editor || current_user_can( 'edit_posts' ) ) ? '' : esc_url( rest_url( 'nse/v1/track' ) ),
+			$editor ? ' data-preview="1"' : '',
 			esc_attr( wp_json_encode( $config ) )
 		);
 	}

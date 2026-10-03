@@ -2,7 +2,7 @@
 Contributors: novoslate
 Requires at least: 6.0
 Requires PHP: 7.4
-Stable tag: 1.13.0
+Stable tag: 1.14.0
 License: GPLv2 or later
 
 Instant price estimators with lead capture for contractors.
@@ -105,6 +105,16 @@ The illustration is captured in the visitor's browser when they submit. The serv
 
 Uses FPDF (lib/fpdf), which is free to use, modify, and distribute.
 
+== Elementor ==
+With Elementor active, search for "Project Estimator" in the widget panel.
+
+* Content: pick a published estimator and, optionally, override its layout for this placement.
+* Style: optional design overrides (accent, text on accent, text, secondary text, background, borders, selected option background, corner radius, max width, and typography). Blank fields keep the estimator's design. Elementor global colors and fonts work here too.
+* In the editor the estimator renders live, but quote requests are turned off ("Preview only") and nothing is tracked, so building pages never creates leads.
+* The widget is never cached by Elementor's element caching, since its output differs for visitors and logged-in editors.
+
+Other page builders can start estimators added after page load with window.ProjectEstimator.start(element) or window.ProjectEstimator.boot().
+
 == Customer photos ==
 Turn on Photos in an estimator's Quote form card (Hidden, Optional, or Required). Visitors can add up to 6 photos of their space from the camera roll or camera.
 
@@ -159,6 +169,11 @@ Suggested Google Ads tracking template:
 Disable capture with: add_filter( 'pe_capture_attribution', '__return_false' );
 
 == Changelog ==
+= 1.14.0 =
+* Elementor widget with an estimator picker, per-placement layout, and design overrides (colors, corner radius, max width, typography).
+* Live preview in the Elementor editor with submissions turned off.
+* Shortcode layout attribute: [project_estimator id="123" layout="always"].
+
 = 1.13.0 =
 * Customer photo uploads (up to 6), shrunk in the browser with location data removed.
 * Photos on the lead screen, in the business email, on a PDF page, and as links in the webhook and CSV.
