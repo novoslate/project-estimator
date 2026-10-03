@@ -2,7 +2,7 @@
 Contributors: novoslate
 Requires at least: 6.0
 Requires PHP: 7.4
-Stable tag: 1.8.0
+Stable tag: 1.9.0
 License: GPLv2 or later
 
 Instant price estimators with lead capture for contractors.
@@ -17,7 +17,7 @@ Templates: outdoor living (patio covers, pergolas, sunrooms, enclosures), yard (
 Leads are:
 * Saved under Estimators > Leads
 * Emailed to the address set on each estimator (falls back to the site admin email)
-* Posted as JSON to an optional webhook (Zapier, Make, HubSpot workflows, etc.)
+* Posted as JSON to an optional webhook (Zapier, Make, HubSpot workflows, etc.) with retries and a delivery log
 
 == Setup ==
 1. Upload the zip under Plugins > Add New > Upload Plugin and activate.
@@ -38,6 +38,18 @@ Estimators > Settings holds defaults for every estimator:
 * Design defaults: style (card, soft shadow, or flat), accent, text, secondary text, background, and border colors, font, corners, max width, and whether to show the business name, step numbers, and a sticky price bar. Text on the accent color switches between white and dark automatically for readability.
 
 Each estimator has a Design card set to "Use global design settings" by default. Switch it to custom to style one estimator differently.
+
+== CRM webhook ==
+Set a Webhook URL on an estimator (for example a Zapier "Catch Hook" that creates a lead in the client's CRM) and every quote request is sent there as JSON.
+
+* Sent right after the visitor's confirmation, so it never slows the form.
+* Anything other than a 2xx response is retried after 1 minute, 5 minutes, 30 minutes, 2 hours, and 6 hours. After the last try, an alert is emailed to "Webhook failure alerts" under Estimators > Settings (the site admin email by default).
+* Each lead shows its delivery status and every attempt (time, response code, message) in the "CRM webhook" box, with a "Resend now" button. The Leads list has a CRM column, a "View failed leads" notice, and a "Resend to CRM webhook" bulk action for after a Zap is fixed.
+* "Send test lead" next to the Webhook URL sends a sample lead named "Test Lead" with test: true.
+* The JSON has every lead field (contact, project, estimate, source, campaign, click IDs, pdf_url) plus event, lead_id, status, delivery_attempt, test, and site. Headers: X-PE-Event, X-PE-Lead-ID, X-PE-Attempt.
+* Only public addresses are allowed; internal network addresses are refused.
+
+Retries run on WP-Cron, which fires when the site gets visits. On low-traffic sites, a real server cron job calling wp-cron.php every few minutes keeps retries on schedule.
 
 == Spam protection ==
 Every form has a hidden honeypot field, a minimum fill time, and a per-visitor rate limit. For more protection, turn on Google reCAPTCHA under Estimators > Settings > Spam protection:
@@ -106,6 +118,12 @@ Suggested Google Ads tracking template:
 Disable capture with: add_filter( 'pe_capture_attribution', '__return_false' );
 
 == Changelog ==
+= 1.9.0 =
+* Reliable CRM webhook delivery: sent after the response, retried with backoff for about 9 hours, with a failure alert email.
+* Delivery log and "Resend now" on each lead, a CRM column, failed-lead notice and filter, and a "Resend to CRM webhook" bulk action.
+* "Send test lead" button next to the Webhook URL.
+* Webhooks can only go to public addresses.
+
 = 1.8.0 =
 * Google reCAPTCHA v2 Checkbox and v3 Invisible, with server-side verification.
 * v3 score threshold, saved per lead and in the CSV export, plus an option to hide the badge.

@@ -264,6 +264,7 @@
 				text('CC', 'business.cc', { placeholder: G.cc || 'name@example.com', help: 'Blank uses the global CC.' }) +
 				text('BCC', 'business.bcc', { placeholder: G.bcc || 'name@example.com', help: 'Blank uses the global BCC.' }) +
 				text('Webhook URL (optional)', 'business.webhook_url', { type: 'url', placeholder: 'https://hooks.zapier.com/...' }) +
+				'<div class="nse-f nse-wh-test"><span>&nbsp;</span><div><button type="button" class="button" data-action="webhook-test">Send test lead</button> <span class="nse-wh-result" role="status"></span></div></div>' +
 				'</div>',
 				'Leads are saved under Estimators > Leads, emailed to the addresses above, and posted to the webhook if set. Separate multiple emails with commas. Defaults live in <a href="' + esc(NSE_ADMIN.settingsUrl) + '">Estimators > Settings</a>.') +
 
@@ -373,6 +374,23 @@
 			list.push(/\.addons$/.test(b.dataset.list)
 				? { name: '', note: '', low: 0, high: 0, per_unit: false, feature: 'none' }
 				: { name: '', note: '', low: 0, high: 0, variant: '' });
+		} else if (a === 'webhook-test') {
+			var out = root.querySelector('.nse-wh-result');
+			var url = (cfg.business && cfg.business.webhook_url) || '';
+			if (!url) { out.textContent = 'Enter a webhook URL first.'; out.className = 'nse-wh-result is-bad'; return; }
+			b.disabled = true; out.textContent = 'Sending...'; out.className = 'nse-wh-result';
+			var fd = new FormData();
+			fd.append('action', 'pe_webhook_test'); fd.append('nonce', NSE_ADMIN.webhookNonce);
+			fd.append('url', url); fd.append('estimator', NSE_ADMIN.postId || 0);
+			fetch(NSE_ADMIN.ajaxUrl, { method: 'POST', body: fd, credentials: 'same-origin' })
+				.then(function (r) { return r.json(); })
+				.then(function (j) {
+					out.textContent = (j && j.data && j.data.message) || 'Unexpected response.';
+					out.className = 'nse-wh-result ' + (j && j.success ? 'is-ok' : 'is-bad');
+				})
+				.catch(function () { out.textContent = 'Could not reach WordPress. Try again.'; out.className = 'nse-wh-result is-bad'; })
+				.then(function () { b.disabled = false; });
+			return;
 		} else if (a === 'design-mode') {
 			var mode = b.value;
 			if (mode === cfg.design_mode) return;

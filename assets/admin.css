@@ -36,3 +36,6 @@
 #nse-editor .nse-table input[type=color] { width: 44px; height: 30px; padding: 2px; cursor: pointer; }
 #nse-editor .nse-modes { gap: 18px; margin-bottom: 12px; }
 #nse-editor .nse-modes label { display: flex; gap: 6px; align-items: center; font-weight: 600; }
+#nse-editor .nse-wh-result { margin-left: 6px; font-size: 12px; }
+#nse-editor .nse-wh-result.is-ok { color: #1F6B35; }
+#nse-editor .nse-wh-result.is-bad { color: #B32D2E; }

@@ -55,6 +55,7 @@ class NSE_Settings {
 			'logo_id'      => 0,
 			'website'      => '',
 			'reply_to'     => '',
+			'webhook_alert' => '',
 			'recaptcha'    => NSE_Recaptcha::defaults(),
 			'pdf'          => self::pdf_defaults(),
 			'design'       => self::design_defaults(),
@@ -169,6 +170,7 @@ class NSE_Settings {
 			'logo_id'      => isset( $in['logo_id'] ) ? absint( $in['logo_id'] ) : 0,
 			'website'      => isset( $in['website'] ) ? self::sanitize_website( $in['website'] ) : '',
 			'reply_to'     => isset( $in['reply_to'] ) && is_email( sanitize_email( $in['reply_to'] ) ) ? sanitize_email( $in['reply_to'] ) : '',
+			'webhook_alert' => isset( $in['webhook_alert'] ) ? self::sanitize_emails( $in['webhook_alert'] ) : '',
 			'recaptcha'    => NSE_Recaptcha::sanitize( isset( $in['recaptcha'] ) ? $in['recaptcha'] : array() ),
 			'pdf'          => self::sanitize_pdf( isset( $in['pdf'] ) ? $in['pdf'] : array() ),
 			'design'       => self::sanitize_design( isset( $in['design'] ) ? $in['design'] : array() ),
@@ -436,6 +438,17 @@ class NSE_Settings {
 		$rname = function ( $k ) {
 			return esc_attr( self::OPTION . '[recaptcha][' . $k . ']' );
 		};
+		echo '<h2 id="pe-webhook">CRM webhook</h2>';
+		echo '<p>Each estimator can send its leads to a webhook URL (for example a Zapier Catch Hook connected to the client\'s CRM). Failed deliveries are retried for about 9 hours; this address is emailed if a lead still could not be delivered.</p>';
+		echo '<table class="form-table" role="presentation">';
+		printf(
+			'<tr><th scope="row"><label for="pe-wh-alert">Webhook failure alerts</label></th><td><input type="text" class="regular-text" id="pe-wh-alert" name="%s" value="%s" placeholder="%s"><p class="description">Leave blank to use the site admin email. Separate multiple addresses with commas.</p></td></tr>',
+			self::name( 'webhook_alert' ), // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- escaped in name().
+			esc_attr( $s['webhook_alert'] ),
+			esc_attr( get_option( 'admin_email' ) )
+		);
+		echo '</table>';
+
 		echo '<h2 id="pe-spam">Spam protection</h2>';
 		echo '<p>Google reCAPTCHA blocks bots from submitting quote requests. Create keys at <a href="https://www.google.com/recaptcha/admin/create" target="_blank" rel="noopener">google.com/recaptcha/admin</a>, choosing the same type as below and adding this site\'s domain. v2 and v3 keys are not interchangeable.</p>';
 		if ( 'off' !== $r['mode'] && ( ! $r['site_key'] || ! $r['secret_key'] ) ) {

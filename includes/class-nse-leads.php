@@ -251,6 +251,12 @@ class NSE_Leads {
 		} catch ( Throwable $e ) {
 			NSE_Pdf::log( $e );
 		}
+		// CRM webhook: sent after the response, with retries and a delivery log.
+		try {
+			NSE_Webhook::queue( $lead_id );
+		} catch ( Throwable $e ) {
+			NSE_Pdf::log( $e );
+		}
 		if ( $pdf_path ) {
 			try {
 				self::email_customer( $c, $lead, $pdf_path );
@@ -332,17 +338,6 @@ class NSE_Leads {
 		$attachments = ( $pdf_path && $settings['pdf']['attach_business'] ) ? array( $pdf_path ) : array();
 		wp_mail( $rcpt['to'], 'New ' . strtolower( $lead['project'] ) . ' quote request: ' . $lead['name'], implode( "\n", $lines ), $headers, $attachments );
 
-		if ( $c['business']['webhook_url'] ) {
-			wp_remote_post(
-				$c['business']['webhook_url'],
-				array(
-					'headers'  => array( 'Content-Type' => 'application/json' ),
-					'body'     => wp_json_encode( $lead ),
-					'timeout'  => 5,
-					'blocking' => false,
-				)
-			);
-		}
 	}
 
 	/**
