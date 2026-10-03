@@ -33,3 +33,4 @@
 #nse-editor .nse-ptools .nse-del { margin-left: 8px; }
 #nse-editor .nse-adder { margin-top: 14px; }
 #nse-editor button[disabled] { opacity: .5; cursor: default; }
+#nse-editor .nse-table input[type=color] { width: 44px; height: 30px; padding: 2px; cursor: pointer; }

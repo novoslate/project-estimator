@@ -50,6 +50,8 @@ class NSE_Templates {
 				'min_job'       => 2500,
 				'options_label' => 'Choose a style',
 				'addons_label'  => 'Add extras',
+				'colors_label'  => 'Choose a color',
+				'colors'        => array(),
 				'dims'          => array(),
 				'options'       => array(),
 				'addons'        => array(),
@@ -70,9 +72,86 @@ class NSE_Templates {
 		return compact( 'name', 'note', 'low', 'high', 'per_unit' );
 	}
 
+	private static function color( $name, $hex, $upcharge = 0 ) {
+		return compact( 'name', 'hex', 'upcharge' );
+	}
+
+	/**
+	 * Default color lists by preview scene. Also used to give existing
+	 * project types colors when they were saved before colors existed.
+	 */
+	public static function default_colors( $scene ) {
+		$frame = array(
+			self::color( 'White', '#F7F6F2' ),
+			self::color( 'Desert Sand', '#D8C6A4' ),
+			self::color( 'Adobe', '#C9A983' ),
+			self::color( 'Bronze', '#5B4636' ),
+		);
+		switch ( $scene ) {
+			case 'patio_cover':
+				return array( 'Frame color', array_merge( $frame, array( self::color( 'Woodgrain', '#9A6A42', 15 ) ) ) );
+			case 'pergola':
+				return array(
+					'Finish color',
+					array(
+						self::color( 'White', '#F7F6F2' ),
+						self::color( 'Bronze', '#5B4636' ),
+						self::color( 'Charcoal', '#43474A' ),
+						self::color( 'Woodgrain', '#9A6A42', 10 ),
+					),
+				);
+			case 'sunroom':
+			case 'enclosure':
+				return array( 'Frame color', $frame );
+			case 'landscape':
+				return array(
+					'Rock color',
+					array(
+						self::color( 'Madison Gold', '#C9A66B' ),
+						self::color( 'Express Brown', '#8A6A50' ),
+						self::color( 'Coral Gold', '#D19A6E' ),
+						self::color( 'Table Mesa Brown', '#A07E5E' ),
+					),
+				);
+			case 'pavers':
+				return array(
+					'Paver color',
+					array(
+						self::color( 'Sand', '#D9C29E' ),
+						self::color( 'Ivory', '#EFE6D6' ),
+						self::color( 'Gray', '#B9B8B3' ),
+						self::color( 'Sierra', '#B97C5E' ),
+					),
+				);
+			case 'fence':
+				return array(
+					'Fence color',
+					array(
+						self::color( 'Tan', '#D9C6A5' ),
+						self::color( 'White', '#F5F5F2' ),
+						self::color( 'Black', '#2F3336' ),
+						self::color( 'Bronze', '#5B4636' ),
+						self::color( 'Natural wood', '#B98352' ),
+					),
+				);
+		}
+		return array( 'Choose a color', array() );
+	}
+
+	private static function with_colors( array $project, $scene ) {
+		$c                       = self::default_colors( $scene );
+		$project['colors_label'] = $c[0];
+		$project['colors']       = $c[1];
+		return $project;
+	}
+
 	/* ---------- Project types ---------- */
 
 	private static function patio_cover() {
+		return self::with_colors( self::patio_cover_base(), 'patio_cover' );
+	}
+
+	private static function patio_cover_base() {
 		return self::project(
 			'Patio cover',
 			'Shade attached to your home',
@@ -99,6 +178,10 @@ class NSE_Templates {
 	}
 
 	private static function pergola() {
+		return self::with_colors( self::pergola_base(), 'pergola' );
+	}
+
+	private static function pergola_base() {
 		return self::project(
 			'Pergola',
 			'Freestanding or attached shade structure',
@@ -124,6 +207,10 @@ class NSE_Templates {
 	}
 
 	private static function sunroom() {
+		return self::with_colors( self::sunroom_base(), 'sunroom' );
+	}
+
+	private static function sunroom_base() {
 		return self::project(
 			'Sunroom',
 			'Enclosed room you can use year round',
@@ -150,6 +237,10 @@ class NSE_Templates {
 	}
 
 	private static function patio_enclosure() {
+		return self::with_colors( self::patio_enclosure_base(), 'enclosure' );
+	}
+
+	private static function patio_enclosure_base() {
 		return self::project(
 			'Patio enclosure',
 			'Enclose an existing covered patio',
@@ -175,6 +266,10 @@ class NSE_Templates {
 	}
 
 	private static function landscaping() {
+		return self::with_colors( self::landscaping_base(), 'landscape' );
+	}
+
+	private static function landscaping_base() {
 		return self::project(
 			'Landscaping',
 			'New yard design and install',
@@ -227,6 +322,10 @@ class NSE_Templates {
 	}
 
 	private static function pavers() {
+		return self::with_colors( self::pavers_base(), 'pavers' );
+	}
+
+	private static function pavers_base() {
 		return self::project(
 			'Pavers',
 			'Patios, walkways, and pool decks',
@@ -253,6 +352,10 @@ class NSE_Templates {
 	}
 
 	private static function fencing() {
+		return self::with_colors( self::fencing_base(), 'fence' );
+	}
+
+	private static function fencing_base() {
 		return self::project(
 			'Fencing',
 			'Privacy, security, and gates',

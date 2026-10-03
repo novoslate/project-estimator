@@ -178,13 +178,16 @@ class NSE_Leads {
 			}
 		}
 		$addon_ids = array_values( array_unique( $addon_ids ) );
-		$est       = NSE_Config::estimate( $c, $pi, $opt, $dims, $addon_ids );
+		$ci        = isset( $p['color'] ) ? absint( $p['color'] ) : 0;
+		$ci        = isset( $proj['colors'][ $ci ] ) ? $ci : 0;
+		$est       = NSE_Config::estimate( $c, $pi, $opt, $dims, $addon_ids, $ci );
 
 		$lead += array(
 			'estimator'     => get_the_title( $post ),
 			'estimator_id'  => $id,
 			'project'       => $proj['name'],
 			'option'        => isset( $proj['options'][ $opt ] ) ? $proj['options'][ $opt ]['name'] : '',
+			'color'         => isset( $proj['colors'][ $ci ] ) ? $proj['colors'][ $ci ]['name'] : '',
 			'measurements'  => self::measurements( $proj, $dims ),
 			'quantity'      => $est['qty'] . ' ' . $proj['unit_label'],
 			'extras'        => array_map(
@@ -265,6 +268,9 @@ class NSE_Leads {
 		$lines[] = '';
 		$lines[] = 'Project: ' . $lead['project'];
 		$lines[] = 'Choice: ' . $lead['option'];
+		if ( $lead['color'] ) {
+			$lines[] = 'Color: ' . $lead['color'];
+		}
 		$lines[] = 'Size: ' . $lead['measurements'] . ' (' . $lead['quantity'] . ')';
 		$lines[] = 'Extras: ' . ( $lead['extras'] ? implode( ', ', $lead['extras'] ) : 'None' );
 		$lines[] = 'Estimate shown: ' . self::money( $lead['estimate_low'] ) . ' to ' . self::money( $lead['estimate_high'] );
@@ -350,6 +356,7 @@ class NSE_Leads {
 			'Estimator'      => $lead['estimator'],
 			'Project'        => isset( $lead['project'] ) ? $lead['project'] : '',
 			'Choice'         => $lead['option'],
+			'Color'          => isset( $lead['color'] ) ? $lead['color'] : '',
 			'Size'           => $lead['measurements'] . ' (' . $lead['quantity'] . ')',
 			'Extras'         => $lead['extras'] ? implode( ', ', $lead['extras'] ) : 'None',
 			'Estimate shown' => self::money( $lead['estimate_low'] ) . ' to ' . self::money( $lead['estimate_high'] ),

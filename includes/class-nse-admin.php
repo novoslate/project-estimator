@@ -123,11 +123,20 @@ class NSE_Admin {
 				'templates'  => $templates,
 				'library'    => array_map( array( 'NSE_Config', 'sanitize_project' ), NSE_Templates::library() ),
 				'preview'    => NSE_Preview::admin_catalog(),
+				'colors'     => self::default_color_map(),
 				'config'     => $saved,
 				'defaults'   => NSE_Config::defaults(),
 				'adminEmail' => get_option( 'admin_email' ),
 			)
 		);
+	}
+
+	private static function default_color_map() {
+		$map = array();
+		foreach ( array_keys( NSE_Preview::scenes() ) as $scene ) {
+			$map[ $scene ] = NSE_Templates::default_colors( $scene );
+		}
+		return $map;
 	}
 
 	public static function columns( $cols ) {

@@ -55,8 +55,8 @@
 		}];
 		var multi = projects.length > 1;
 		var biz = cfg.business || {};
-		var proj, opts, addons, dims, unit, linear;
-		var state = { proj: 0, opt: 0, dims: [], addons: {} };
+		var proj, opts, addons, dims, unit, linear, colors;
+		var state = { proj: 0, opt: 0, color: 0, dims: [], addons: {} };
 
 		function useProject(i) {
 			state.proj = i;
@@ -66,7 +66,9 @@
 			dims = proj.dims || [];
 			unit = proj.unit_label || 'sq ft';
 			linear = proj.pricing_model === 'linear';
+			colors = proj.colors || [];
 			state.opt = 0;
+			state.color = 0;
 			state.dims = dims.map(function (d) { return Number(d.default); });
 			state.addons = {};
 		}
@@ -89,7 +91,9 @@
 		function qty() { return linear ? state.dims[0] : state.dims[0] * (state.dims[1] || 0); }
 		function estimate() {
 			var q = qty(), o = opts[state.opt] || { low: 0, high: 0 };
-			var low = q * o.low, high = q * o.high;
+			var col = colors[state.color];
+			var pct = col ? (Number(col.upcharge) || 0) / 100 : 0;
+			var low = q * o.low * (1 + pct), high = q * o.high * (1 + pct);
 			addons.forEach(function (a, i) {
 				if (!state.addons[i]) return;
 				var m = a.per_unit ? q : 1;
@@ -143,7 +147,7 @@
 		/* Project-specific steps: rebuilt when the project type changes */
 		var projBody = h('div', { class: 'nse-project-body' });
 		root.appendChild(projBody);
-		var optBtns = [], outs = [], svg, qtyEl, chipsEl, viewBtns = [];
+		var optBtns = [], colorBtns = [], outs = [], svg, qtyEl, chipsEl, viewBtns = [];
 		var view = '3d';
 		function has3d() { return (proj.preview || 'plan') !== 'plan' && !!window.PEPreview; }
 
@@ -162,6 +166,25 @@
 							o.note ? h('span', { text: o.note }) : null
 						]);
 						optBtns.push(b);
+						return b;
+					}))
+				]));
+			}
+
+			/* Colors */
+			colorBtns = [];
+			if (colors.length) {
+				projBody.appendChild(h('section', { class: 'nse-sec', 'aria-labelledby': uid + '-c' }, [
+					stepTitle(proj.colors_label || 'Choose a color', uid + '-c'),
+					h('div', { class: 'nse-colors' }, colors.map(function (c, i) {
+						var b = h('button', { type: 'button', class: 'nse-color', onclick: function () { state.color = i; update(); } }, [
+							h('span', { class: 'nse-swatch', style: 'background:' + c.hex, 'aria-hidden': 'true' }),
+							h('span', { class: 'nse-color-t' }, [
+								h('span', { text: c.name }),
+								Number(c.upcharge) ? h('small', { text: '+' + Number(c.upcharge) + '%' }) : null
+							])
+						]);
+						colorBtns.push(b);
 						return b;
 					}))
 				]));
@@ -298,9 +321,10 @@
 					variant: o && o.variant ? o.variant : '',
 					dims: state.dims.slice(),
 					max: dims.map(function (d) { return Number(d.max); }),
-					features: picked.map(function (a) { return a.feature || 'none'; })
+					features: picked.map(function (a) { return a.feature || 'none'; }),
+					color: colors[state.color] ? colors[state.color].hex : null
 				});
-				svg.setAttribute('aria-label', 'Illustration of your ' + proj.name.toLowerCase() + (o ? ', ' + o.name : ''));
+				svg.setAttribute('aria-label', 'Illustration of your ' + proj.name.toLowerCase() + (o ? ', ' + o.name : '') + (colors[state.color] ? ', ' + colors[state.color].name : ''));
 			} else {
 				svg.setAttribute('viewBox', '0 0 400 220');
 				svg.setAttribute('aria-label', 'Top-down diagram of your project size');
@@ -330,6 +354,7 @@
 				lead_id: leadId,
 				project_type: proj.name,
 				project_option: opt ? opt.name : '',
+				project_color: colors[state.color] ? colors[state.color].name : '',
 				estimate_low: low,
 				estimate_high: high,
 				value: value,
@@ -352,6 +377,7 @@
 		function update() {
 			projBtns.forEach(function (b, i) { b.setAttribute('aria-pressed', i === state.proj ? 'true' : 'false'); });
 			optBtns.forEach(function (b, i) { b.setAttribute('aria-pressed', i === state.opt ? 'true' : 'false'); });
+			colorBtns.forEach(function (b, i) { b.setAttribute('aria-pressed', i === state.color ? 'true' : 'false'); });
 			outs.forEach(function (o, i) { o.textContent = num(state.dims[i]) + ' ft'; });
 			qtyEl.textContent = num(qty()) + ' ' + unit;
 			var e = estimate();
@@ -383,6 +409,7 @@
 				address: v('address'), timeline: v('timeline'), notes: v('notes'),
 				project: state.proj,
 				option: state.opt,
+				color: state.color,
 				dims: state.dims,
 				addons: Object.keys(state.addons).filter(function (i) { return state.addons[i]; }).map(Number),
 				page: window.location.href,
@@ -400,7 +427,7 @@
 					var o = opts[state.opt];
 					var picked = addons.filter(function (a, i) { return state.addons[i]; }).map(function (a) { return a.name; });
 					var list = h('ul', {}, [
-						h('li', { text: proj.name + (o ? ': ' + o.name : '') + ', ' + num(qty()) + ' ' + unit }),
+						h('li', { text: proj.name + (o ? ': ' + o.name : '') + (colors[state.color] ? ' in ' + colors[state.color].name : '') + ', ' + num(qty()) + ' ' + unit }),
 						h('li', { text: picked.length ? 'Extras: ' + picked.join(', ') : 'No extras' }),
 						res.j.low ? h('li', { text: 'Estimate: ' + money(res.j.low) + ' to ' + money(res.j.high) }) : null
 					]);

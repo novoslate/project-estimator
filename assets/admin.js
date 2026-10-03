@@ -36,7 +36,9 @@
 			options_label: 'Choose a style', addons_label: 'Add extras',
 			dims: [{ label: 'Width (ft)', min: 5, max: 100, step: 1, default: 20 }, { label: 'Length (ft)', min: 5, max: 100, step: 1, default: 20 }],
 			options: [{ name: 'Option 1', note: '', low: 10, high: 20 }],
-			addons: []
+			addons: [],
+			colors_label: 'Choose a color',
+			colors: []
 		};
 	}
 
@@ -61,6 +63,8 @@
 			p.options = p.options || [];
 			p.addons = p.addons || [];
 			if (!PV.scenes[p.preview]) p.preview = 'plan';
+			p.colors = Array.isArray(p.colors) ? p.colors : [];
+			if (p.colors_label === undefined) p.colors_label = 'Choose a color';
 			var looks = PV.scenes[p.preview].variants.map(function (v) { return v[0]; });
 			p.options.forEach(function (o) {
 				if (looks.length && looks.indexOf(o.variant) === -1) o.variant = looks[0];
@@ -115,6 +119,9 @@
 				var path = listPath + '.' + i + '.' + c.k;
 				if (c.check) {
 					return '<td class="nse-c"><input type="checkbox" data-path="' + path + '" data-type="bool"' + (row[c.k] ? ' checked' : '') + '></td>';
+				}
+				if (c.color) {
+					return '<td class="nse-c"><input type="color" data-path="' + path + '" data-type="text" value="' + esc(row[c.k] || '#FFFFFF') + '"></td>';
 				}
 				if (c.choices) {
 					return '<td><select data-path="' + path + '" data-type="text">' + c.choices.map(function (ch) {
@@ -180,6 +187,15 @@
 				{ k: 'low', label: 'Low $ per ' + unit, num: true },
 				{ k: 'high', label: 'High $ per ' + unit, num: true }
 			].concat(looks.length ? [{ k: 'variant', label: 'Preview look', choices: looks }] : []), 'Add choice', true) +
+			'<h4>Colors</h4><p class="description">Optional. Visitors pick one, and the preview repaints the main material. Upcharge % applies to the base price, not extras. Leave the list empty to skip this step.</p>' +
+			'<div class="nse-grid">' + text('Colors heading', base + '.colors_label', { placeholder: 'Frame color' }) + '</div>' +
+			rows(base + '.colors', [
+				{ k: 'name', label: 'Color name' },
+				{ k: 'hex', label: 'Swatch', color: true },
+				{ k: 'upcharge', label: 'Upcharge %', num: true }
+			], 'Add color', true) +
+			((NSE_ADMIN.colors && NSE_ADMIN.colors[p.preview] && NSE_ADMIN.colors[p.preview][1].length)
+				? '<p><button type="button" class="button-link" data-action="default-colors">Use default ' + esc(PV.scenes[p.preview].label.toLowerCase()) + ' colors</button></p>' : '') +
 			'<h4>Extras</h4><p class="description">Flat price unless "Per ' + unit + '" is checked.</p>' +
 			rows(base + '.addons', [
 				{ k: 'name', label: 'Name' },
@@ -312,9 +328,15 @@
 			P.splice(ap, 1);
 		} else if (a === 'add-row') {
 			var list = get(b.dataset.list);
+			if (/\.colors$/.test(b.dataset.list)) { list.push({ name: '', hex: '#FFFFFF', upcharge: 0 }); render(); return; }
 			list.push(/\.addons$/.test(b.dataset.list)
 				? { name: '', note: '', low: 0, high: 0, per_unit: false, feature: 'none' }
 				: { name: '', note: '', low: 0, high: 0, variant: '' });
+		} else if (a === 'default-colors') {
+			var dc = NSE_ADMIN.colors[P[ap].preview];
+			if (P[ap].colors.length && !window.confirm('Replace this project type\'s colors with the defaults?')) return;
+			P[ap].colors_label = dc[0];
+			P[ap].colors = clone(dc[1]);
 		} else if (a === 'remove-row') {
 			get(b.dataset.list).splice(parseInt(b.dataset.i, 10), 1);
 		}

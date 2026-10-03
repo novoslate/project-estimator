@@ -2,7 +2,7 @@
 Contributors: novoslate
 Requires at least: 6.0
 Requires PHP: 7.4
-Stable tag: 1.3.0
+Stable tag: 1.4.0
 License: GPLv2 or later
 
 Instant price estimators with lead capture for contractors.
@@ -38,11 +38,16 @@ Scenes: patio cover, pergola, sunroom, patio enclosure, landscaping, artificial 
 
 Existing and custom estimators are matched to scenes, looks, and features automatically from their names. Choose "Top-down plan only" to turn the illustration off.
 
+== Colors ==
+Each project type can have a color list (for example frame colors for patio covers, rock colors for landscaping, or paver colors). Visitors pick a color and the preview repaints the main material. A color can carry an upcharge percentage that applies to the base price, not extras (for example Woodgrain +15%).
+
+Templates include default color lists. Project types saved before 1.4.0 get the defaults for their preview scene automatically. Leave the list empty to skip the color step. The chosen color is saved on the lead, included in the email, and sent to the dataLayer as project_color.
+
 == Conversion tracking ==
 Every quote request pushes an event to window.dataLayer for Google Tag Manager:
 
   event: project_estimator_lead (editable per estimator)
-  estimator_id, estimator_name, lead_id, project_type, project_option,
+  estimator_id, estimator_name, lead_id, project_type, project_option, project_color,
   estimate_low, estimate_high, value, currency
   user_data { email, phone_number } when Enhanced conversions is on
 
@@ -61,6 +66,11 @@ Suggested Google Ads tracking template:
 Disable capture with: add_filter( 'pe_capture_attribution', '__return_false' );
 
 == Changelog ==
+= 1.4.0 =
+* Colors per project type with swatches, optional upcharge %, and live preview repainting.
+* Default color lists for every template scene.
+* Color saved on leads, emails, webhook, and the dataLayer.
+
 = 1.3.0 =
 * Live illustrated preview for 8 project scenes, with 3D and top views.
 * Preview looks per choice and visual features per extra, auto-detected from names.

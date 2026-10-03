@@ -216,6 +216,28 @@ class NSE_Config {
 			);
 		}
 
+		// Colors. Projects saved before colors existed get the scene's defaults.
+		if ( isset( $p['colors'] ) && is_array( $p['colors'] ) ) {
+			$raw_colors          = $p['colors'];
+			$out['colors_label'] = self::text( $p, 'colors_label', 'Choose a color' );
+		} else {
+			$def                 = NSE_Templates::default_colors( $out['preview'] );
+			$raw_colors          = $def[1];
+			$out['colors_label'] = $def[0];
+		}
+		$out['colors'] = array();
+		foreach ( array_slice( $raw_colors, 0, 16 ) as $col ) {
+			if ( ! is_array( $col ) || '' === trim( (string) ( isset( $col['name'] ) ? $col['name'] : '' ) ) ) {
+				continue;
+			}
+			$hex             = isset( $col['hex'] ) ? sanitize_hex_color( $col['hex'] ) : '';
+			$out['colors'][] = array(
+				'name'     => self::text( $col, 'name' ),
+				'hex'      => $hex ? $hex : '#FFFFFF',
+				'upcharge' => min( 200, self::num( isset( $col['upcharge'] ) ? $col['upcharge'] : 0 ) ),
+			);
+		}
+
 		// Extras (flat or per unit).
 		$out['addons'] = array();
 		foreach ( array_slice( self::list_of( $p, 'addons' ), 0, 30 ) as $a ) {
@@ -243,13 +265,15 @@ class NSE_Config {
 	 *
 	 * @return array{low:float,high:float,qty:float}
 	 */
-	public static function estimate( array $c, $project_index, $option_index, array $dims, array $addon_indexes ) {
+	public static function estimate( array $c, $project_index, $option_index, array $dims, array $addon_indexes, $color_index = 0 ) {
 		$p   = isset( $c['projects'][ $project_index ] ) ? $c['projects'][ $project_index ] : $c['projects'][0];
 		$qty = 'linear' === $p['pricing_model'] ? $dims[0] : $dims[0] * $dims[1];
 		$opt = isset( $p['options'][ $option_index ] ) ? $p['options'][ $option_index ] : array( 'low' => 0, 'high' => 0 );
 
-		$low  = $qty * $opt['low'];
-		$high = $qty * $opt['high'];
+		// A color upcharge applies to the base price, not to extras.
+		$pct  = isset( $p['colors'][ $color_index ] ) ? $p['colors'][ $color_index ]['upcharge'] / 100 : 0;
+		$low  = $qty * $opt['low'] * ( 1 + $pct );
+		$high = $qty * $opt['high'] * ( 1 + $pct );
 
 		foreach ( $addon_indexes as $i ) {
 			if ( ! isset( $p['addons'][ $i ] ) ) {

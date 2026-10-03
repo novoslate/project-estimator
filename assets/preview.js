@@ -16,6 +16,21 @@
 	var ROOFCAP = ['#A39582', '#8E806C', '#7C6F5C'];
 	var STONE = ['#C9C2B6', '#B3AB9D', '#9D9586'];
 
+	/* Active color for this render, or null for the defaults */
+	var tint = null;
+
+	function mix(hex, amt) {
+		/* amt > 0 lightens toward white, < 0 darkens toward black */
+		var n = parseInt(hex.slice(1), 16), r = n >> 16, g = (n >> 8) & 255, b = n & 255;
+		var t = amt > 0 ? 255 : 0, a = Math.abs(amt);
+		r = Math.round(r + (t - r) * a); g = Math.round(g + (t - g) * a); b = Math.round(b + (t - b) * a);
+		return '#' + ((1 << 24) + (r << 16) + (g << 8) + b).toString(16).slice(1);
+	}
+	function shades(hex) { return [mix(hex, 0.12), mix(hex, -0.06), mix(hex, -0.18)]; }
+	/* Palette for the main material: the chosen color, or the scene default */
+	function main(def) { return tint ? shades(tint) : def; }
+	function mainHex(def) { return tint || def; }
+
 	function Scene(svg) {
 		this.svg = svg;
 		this.k = 1; this.ox = 0; this.oy = 0;
@@ -158,7 +173,7 @@
 	/* ---------- Scenes ---------- */
 
 	function patioCover(sc, W, D, variant, f, hooks) {
-		var Hb = 10, H = 9.2;
+		var Hb = 10, H = 9.2, F = main(ALU);
 		var zAt = function (y) { return Hb + (H - Hb) * (y / D); };
 		slab(sc, -0.6, 0, W + 0.6, D + 0.6);
 		shadow(sc, 0, 0, W, D, 9);
@@ -166,26 +181,26 @@
 
 		var solidTo = variant === 'lattice' ? 0 : variant === 'combo' ? W / 2 : W;
 		/* Ledger on the wall */
-		sc.box(0, 0, Hb - 0.6, W, 0.4, 0.6, ALU);
+		sc.box(0, 0, Hb - 0.6, W, 0.4, 0.6, F);
 		if (solidTo > 0) {
-			sc.slope(0, solidTo, 0, D + 0.4, Hb, H, 0.45, ALU);
+			sc.slope(0, solidTo, 0, D + 0.4, Hb, H, 0.45, F);
 			for (var px = 2; px < solidTo - 0.5; px += 2) {
 				sc.line([px, 0, Hb + 0.46], [px, D + 0.4, H + 0.46], 'rgba(0,0,0,.08)', 0.8);
 			}
 		}
 		if (solidTo < W) {
 			for (var rx = solidTo + 0.2; rx < W; rx += 2) {
-				sc.slope(rx, rx + 0.3, 0, D + 0.6, Hb - 0.6, H - 0.6, 0.6, ALU);
+				sc.slope(rx, rx + 0.3, 0, D + 0.6, Hb - 0.6, H - 0.6, 0.6, F);
 			}
 			for (var ly = 0.6; ly < D + 0.4; ly += 0.9) {
 				var z = zAt(ly) + 0.02;
-				sc.box(solidTo, ly, z, W - solidTo, 0.22, 0.22, ALU);
+				sc.box(solidTo, ly, z, W - solidTo, 0.22, 0.22, F);
 			}
 		}
 		/* Front beam and posts */
-		sc.box(-0.3, D - 0.4, H - 1, W + 0.6, 0.8, 1, ALU);
+		sc.box(-0.3, D - 0.4, H - 1, W + 0.6, 0.8, 1, F);
 		hooks && hooks.beforePosts && hooks.beforePosts(H);
-		postXs(W, 12).forEach(function (x) { sc.box(x, D - 0.5, 0.3, 0.5, 0.5, H - 1.3, ALU); });
+		postXs(W, 12).forEach(function (x) { sc.box(x, D - 0.5, 0.3, 0.5, 0.5, H - 1.3, F); });
 		if (has(f, 'lights')) {
 			for (var lx = 2; lx < W - 1; lx += 4) sc.glow(lx, D + 0.2, H - 1.2);
 		}
@@ -193,7 +208,7 @@
 
 	function pergola(sc, W, D, variant, f) {
 		var y0 = 2.5, y1 = y0 + D, H = 8.6;
-		var c = variant === 'wood' ? WOOD : ALU;
+		var c = main(variant === 'wood' ? WOOD : ALU);
 		slab(sc, -0.8, y0 - 0.8, W + 0.8, y1 + 0.8, STONE);
 		shadow(sc, 0, y0, W, y1, 9);
 		var xs = postXs(W, 14);
@@ -210,12 +225,12 @@
 			sc.box(-0.6, y0, H, 0.5, D, 0.8, c);
 			sc.box(W + 0.1, y0, H, 0.5, D, 0.8, c);
 			for (var ly = y0 + 0.6; ly < y1 - 0.6; ly += 0.75) {
-				sc.poly([[-0.1, ly, H + 0.5], [W + 0.1, ly, H + 0.5], [W + 0.1, ly + 0.6, H + 0.9], [-0.1, ly + 0.6, H + 0.9]], ALU[0]);
+				sc.poly([[-0.1, ly, H + 0.5], [W + 0.1, ly, H + 0.5], [W + 0.1, ly + 0.6, H + 0.9], [-0.1, ly + 0.6, H + 0.9]], c[0]);
 			}
 		} else {
 			for (var rx = 0; rx <= W; rx += 1.6) sc.box(rx, y0 - 1, H + 0.8, 0.3, D + 2, 0.6, c);
 			if (variant === 'wood') {
-				for (var sy = y0 - 0.5; sy < y1 + 0.6; sy += 1.4) sc.box(-0.3, sy, H + 1.4, W + 0.6, 0.18, 0.18, WOOD);
+				for (var sy = y0 - 0.5; sy < y1 + 0.6; sy += 1.4) sc.box(-0.3, sy, H + 1.4, W + 0.6, 0.18, 0.18, c);
 			}
 		}
 		if (has(f, 'canopy')) {
@@ -255,28 +270,29 @@
 		var Hb = 10, H = 8.8;
 		var glass = variant === 'screen' ? 'rgba(80,90,95,.38)' : 'rgba(175,208,222,.62)';
 		var knee = variant === 'four_season' ? 2.6 : variant === 'three_season' ? 1.6 : 0.9;
-		var kneeC = variant === 'four_season' ? STUCCO : ALU;
+		var F = main(ALU), frame = mainHex('#FFFFFF');
+		var kneeC = variant === 'four_season' ? STUCCO : F;
 		slab(sc, -0.4, 0, W + 0.4, D + 0.4);
 		shadow(sc, 0, 0, W, D, 9);
 		if (has(f, 'ac')) {
 			sc.box(W + 1.5, D * 0.35, 0, 2.6, 1.3, 2.2, ['#D9DBD8', '#C4C7C3', '#B0B3AF']);
 			sc.line([W + 1.5, D * 0.35 + 0.6, 1.8], [W + 0.2, D * 0.35 + 0.6, 4], '#9A9C98', 1.1);
 		}
-		sc.slope(-0.3, W + 0.3, 0, D + 0.6, Hb, H, variant === 'four_season' ? 0.8 : 0.5, ALU);
+		sc.slope(-0.3, W + 0.3, 0, D + 0.6, Hb, H, variant === 'four_season' ? 0.8 : 0.5, F);
 		/* Front wall (y = D) and right wall (x = W) */
 		sc.box(0, D - 0.4, 0.3, W, 0.4, knee, kneeC);
 		sc.box(W - 0.4, 0, 0.3, 0.4, D - 0.4, knee, kneeC);
 		var top = H - 0.1;
-		wallPanels(sc, [0, D], [W, D], knee + 0.3, top, 3, glass);
-		wallPanels(sc, [W, 0], [W, D], knee + 0.3, top, 3, glass);
+		wallPanels(sc, [0, D], [W, D], knee + 0.3, top, 3, glass, frame);
+		wallPanels(sc, [W, 0], [W, D], knee + 0.3, top, 3, glass, frame);
 		/* Door on the front */
 		var dx = Math.max(0.5, W / 2 - 1.5);
-		panel(sc, [dx, D + 0.02], [dx + 3, D + 0.02], 0.3, 7, variant === 'screen' ? 'rgba(80,90,95,.45)' : 'rgba(165,200,215,.75)', '#FFFFFF');
+		panel(sc, [dx, D + 0.02], [dx + 3, D + 0.02], 0.3, 7, variant === 'screen' ? 'rgba(80,90,95,.45)' : 'rgba(165,200,215,.75)', frame);
 		sc.dot(dx + 2.6, D + 0.05, 3.6, 1.2, '#7A7A72');
 		if (variant !== 'screen') {
 			/* Transom band */
-			sc.line([0, D, top - 1.2], [W, D, top - 1.2], '#FFFFFF', 1.1);
-			sc.line([W, 0, top - 1.2], [W, D, top - 1.2], '#FFFFFF', 1.1);
+			sc.line([0, D, top - 1.2], [W, D, top - 1.2], frame, 1.1);
+			sc.line([W, 0, top - 1.2], [W, D, top - 1.2], frame, 1.1);
 		}
 		if (has(f, 'lights')) {
 			for (var lx = 2; lx < W - 1; lx += 4) sc.glow(lx, D + 0.4, H - 0.2);
@@ -293,12 +309,13 @@
 					sc.box(0, D - 0.5, 0.3, W, 0.5, knee - 0.3, STUCCO);
 					sc.box(W - 0.5, 0.2, 0.3, 0.5, D - 0.7, knee - 0.3, STUCCO);
 				}
-				wallPanels(sc, [0, D - 0.25], [W, D - 0.25], knee, top, 4, fill, variant === 'screen' ? '#E9E7E0' : '#FFFFFF');
-				wallPanels(sc, [W - 0.25, 0.3], [W - 0.25, D - 0.25], knee, top, 4, fill, variant === 'screen' ? '#E9E7E0' : '#FFFFFF');
+				var frame = mainHex(variant === 'screen' ? '#E9E7E0' : '#FFFFFF');
+				wallPanels(sc, [0, D - 0.25], [W, D - 0.25], knee, top, 4, fill, frame);
+				wallPanels(sc, [W - 0.25, 0.3], [W - 0.25, D - 0.25], knee, top, 4, fill, frame);
 				if (has(f, 'screen_door')) {
 					var dx = Math.max(0.6, W / 2 - 1.5);
-					panel(sc, [dx, D - 0.2], [dx + 3, D - 0.2], 0.3, 7, 'rgba(70,80,85,.5)', '#F4F2EC');
-					sc.line([dx, D - 0.2, 3.5], [dx + 3, D - 0.2, 3.5], '#F4F2EC', 1.4);
+					panel(sc, [dx, D - 0.2], [dx + 3, D - 0.2], 0.3, 7, 'rgba(70,80,85,.5)', frame);
+					sc.line([dx, D - 0.2, 3.5], [dx + 3, D - 0.2, 3.5], frame, 1.4);
 				}
 			}
 		});
@@ -345,7 +362,8 @@
 
 	function landscape(sc, W, D, variant, f) {
 		var y0 = 1, y1 = y0 + D;
-		gravelBed(sc, 0, y0, W, y1, variant === 'gravel' ? '#D2C4A6' : '#D8CBAF', '#B4A486');
+		var rock = mainHex(variant === 'gravel' ? '#D2C4A6' : '#D8CBAF');
+		gravelBed(sc, 0, y0, W, y1, mix(rock, 0.15), mix(rock, -0.15));
 		var items = [];
 		if (variant === 'full') {
 			/* Paver path curving through the yard */
@@ -392,7 +410,8 @@
 
 	function turf(sc, W, D, variant, f) {
 		var y0 = 1, y1 = y0 + D;
-		var a = variant === 'premium' ? '#5E9147' : '#6D9E4E', b = variant === 'premium' ? '#69A052' : '#7AAB5A';
+		var g = mainHex(variant === 'premium' ? '#63974B' : '#72A353');
+		var a = mix(g, -0.05), b = mix(g, 0.06);
 		for (var sx = 0, i = 0; sx < W; sx += 2.5, i++) {
 			sc.flat(sx, y0, Math.min(W, sx + 2.5), y1, 0.05, i % 2 ? a : b, 'none');
 		}
@@ -415,11 +434,11 @@
 
 	function pavers(sc, W, D, variant, f) {
 		var y0 = 1, y1 = y0 + D;
-		var base = variant === 'travertine' ? '#EFE6D6' : variant === 'porcelain' ? '#C9C9C4' : '#D6C2A6';
+		var base = mainHex(variant === 'travertine' ? '#EFE6D6' : variant === 'porcelain' ? '#C9C9C4' : '#D6C2A6');
 		var joint = variant === 'travertine' ? 'rgba(150,130,100,.35)' : variant === 'porcelain' ? 'rgba(80,80,80,.25)' : 'rgba(120,95,70,.35)';
 		var pl = variant === 'travertine' ? 2 : variant === 'porcelain' ? 4 : 1.5;
 		var pd = variant === 'travertine' ? 2 : variant === 'porcelain' ? 1.3 : 0.9;
-		sc.box(0, y0, 0, W, D, 0.25, [base, '#B9AE9C', '#A89D8B']);
+		sc.box(0, y0, 0, W, D, 0.25, [base, mix(base, -0.2), mix(base, -0.3)]);
 		var z = 0.26, d = '';
 		for (var yy = y0 + pd, row = 0; yy < y1; yy += pd, row++) d += sc.d([[0, yy, z], [W, yy, z]]);
 		for (var ry = y0, r2 = 0; ry < y1 - 0.01; ry += pd, r2++) {
@@ -466,7 +485,7 @@
 			var x = Math.min(ax, bx), y = Math.min(ay, by);
 			var t = variant === 'block' ? 0.7 : 0.35;
 			if (variant === 'block') {
-				var c = stucco ? STUCCO : BLOCK;
+				var c = main(stucco ? STUCCO : BLOCK);
 				if (alongX) sc.box(x, y - t / 2, 0, len, t, H, c); else sc.box(x - t / 2, y, 0, t, len, H, c);
 				if (alongX) sc.box(x - 0.1, y - t / 2 - 0.1, H, len + 0.2, t + 0.2, 0.35, STONE); else sc.box(x - t / 2 - 0.1, y - 0.1, H, t + 0.2, len + 0.2, 0.35, STONE);
 				if (!stucco) {
@@ -484,16 +503,17 @@
 					var px = alongX ? x + s : x, py = alongX ? y : y + s;
 					d += sc.d([[px, py, 0.3], [px, py, H - 0.3]]);
 				}
-				sc.path(d, '#33383B', 0.9);
-				sc.line(alongX ? [x, y, H - 0.4] : [x, y, H - 0.4], alongX ? [x + len, y, H - 0.4] : [x, y + len, H - 0.4], '#2B2F31', 1.4);
-				sc.line(alongX ? [x, y, 0.6] : [x, y, 0.6], alongX ? [x + len, y, 0.6] : [x, y + len, 0.6], '#2B2F31', 1.4);
+				var ironHex = mainHex('#33383B');
+				sc.path(d, ironHex, 0.9);
+				sc.line(alongX ? [x, y, H - 0.4] : [x, y, H - 0.4], alongX ? [x + len, y, H - 0.4] : [x, y + len, H - 0.4], mix(ironHex, -0.1), 1.4);
+				sc.line(alongX ? [x, y, 0.6] : [x, y, 0.6], alongX ? [x + len, y, 0.6] : [x, y + len, 0.6], mix(ironHex, -0.1), 1.4);
 				for (var ps = 0; ps <= len + 0.01; ps += 6) {
-					if (alongX) sc.box(x + Math.min(ps, len) - 0.2, y - 0.2, 0, 0.4, 0.4, H + 0.3, DARK);
-					else sc.box(x - 0.2, y + Math.min(ps, len) - 0.2, 0, 0.4, 0.4, H + 0.3, DARK);
+					if (alongX) sc.box(x + Math.min(ps, len) - 0.2, y - 0.2, 0, 0.4, 0.4, H + 0.3, main(DARK));
+					else sc.box(x - 0.2, y + Math.min(ps, len) - 0.2, 0, 0.4, 0.4, H + 0.3, main(DARK));
 				}
 				return;
 			}
-			var cc = variant === 'vinyl' ? VINYL : WOOD;
+			var cc = main(variant === 'vinyl' ? VINYL : WOOD);
 			if (alongX) sc.box(x, y - t / 2, 0, len, t, H, cc); else sc.box(x - t / 2, y, 0, t, len, H, cc);
 			var lines = '';
 			var gapB = variant === 'vinyl' ? 6 : 0.55;
@@ -526,12 +546,13 @@
 	/* ---------- Public entry ---------- */
 
 	/**
-	 * opts: { scene, variant, dims: [w, d] or [len], max: [w, d] or [len], features: [] }
+	 * opts: { scene, variant, dims: [w, d] or [len], max: [w, d] or [len], features: [], color: '#RRGGBB' }
 	 */
 	function render(svg, opts) {
 		while (svg.firstChild) svg.removeChild(svg.firstChild);
 		svg.setAttribute('viewBox', '0 0 ' + VW + ' ' + VH);
 		var sc = new Scene(svg);
+		tint = /^#[0-9a-f]{6}$/i.test(opts.color || '') ? opts.color : null;
 		var f = opts.features || [];
 		var W = opts.dims[0], D = opts.dims[1] || 0;
 		var MW = Math.max(opts.max[0] || W, W), MD = Math.max(opts.max[1] || D, D);

@@ -1,6 +1,7 @@
 name: Release
 
-# Push a tag like v1.0.1 and this builds project-estimator.zip and attaches it to a GitHub release.
+# Generic plugin release: works in any plugin repo without edits.
+# Push a tag like v1.0.1 and this builds <repo-name>.zip and attaches it to a GitHub release.
 on:
   push:
     tags:
@@ -12,25 +13,32 @@ permissions:
 jobs:
   release:
     runs-on: ubuntu-latest
+    env:
+      SLUG: ${{ github.event.repository.name }}
     steps:
       - uses: actions/checkout@v4
 
       - name: Check version matches tag
         run: |
+          MAIN=$(grep -l "Plugin Name:" ./*.php | head -1)
+          HEADER=$(sed -n 's/^ *\* Version: *//p' "$MAIN" | head -1 | tr -d '[:space:]')
           TAG="${GITHUB_REF_NAME#v}"
-          HEADER=$(grep -oP "^\s*\*\s*Version:\s*\K[0-9.]+" project-estimator.php)
           if [ "$TAG" != "$HEADER" ]; then
-            echo "Tag v$TAG does not match plugin Version: $HEADER"; exit 1
+            echo "Tag v$TAG does not match Version: $HEADER in $MAIN"; exit 1
           fi
 
       - name: Build zip
         run: |
-          mkdir -p build/project-estimator
-          rsync -a --exclude-from=.distignore ./ build/project-estimator/
-          cd build && zip -rq project-estimator.zip project-estimator
+          mkdir -p "build/$SLUG"
+          if [ -f .distignore ]; then
+            rsync -a --exclude-from=.distignore ./ "build/$SLUG/"
+          else
+            rsync -a --exclude='.git' --exclude='.github' --exclude='build' ./ "build/$SLUG/"
+          fi
+          cd build && zip -rq "$SLUG.zip" "$SLUG"
 
       - name: Publish release
         uses: softprops/action-gh-release@v2
         with:
-          files: build/project-estimator.zip
+          files: build/${{ github.event.repository.name }}.zip
           generate_release_notes: true
