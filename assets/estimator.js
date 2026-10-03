@@ -77,10 +77,25 @@
 		var track = cfg.tracking || {};
 		var estId = Number(root.getAttribute('data-id'));
 		var estName = root.getAttribute('data-name') || '';
+		/* Dashboard counters: one view and one start per visitor per estimator per day. */
+		var trackUrl = root.getAttribute('data-track') || '';
+		function trackEvent(ev) {
+			if (!trackUrl) return;
+			var key = 'pe_' + ev + '_' + estId + '_' + new Date().toISOString().slice(0, 10);
+			try { if (window.localStorage.getItem(key)) return; window.localStorage.setItem(key, '1'); } catch (e) { /* storage blocked: still count */ }
+			var body = JSON.stringify({ estimator_id: estId, event: ev });
+			try {
+				if (navigator.sendBeacon && navigator.sendBeacon(trackUrl, new Blob([body], { type: 'application/json' }))) return;
+			} catch (e) { /* fall back to fetch */ }
+			try { fetch(trackUrl, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: body, keepalive: true }); } catch (e) { /* ignore */ }
+		}
+		trackEvent('view');
+
 		var started = false;
 		function markStarted() {
 			if (started) return;
 			started = true;
+			trackEvent('start');
 			push({ event: 'project_estimator_start', estimator_id: estId, estimator_name: estName, project_type: proj.name });
 		}
 		root.addEventListener('click', markStarted, { once: true });

@@ -309,7 +309,7 @@ class NSE_Webhook {
 		}
 		$s = self::state( $post_id );
 		if ( ! $s ) {
-			echo '<span aria-hidden="true">&mdash;</span><span class="screen-reader-text">Not sent</span>';
+			echo '<span style="color:#8c8f94">Not sent</span>';
 			return;
 		}
 		$icons = array( 'delivered' => '&#10003;', 'retrying' => '&#8635;', 'pending' => '&#8635;', 'failed' => '&#10005;' );

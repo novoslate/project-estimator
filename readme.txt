@@ -2,7 +2,7 @@
 Contributors: novoslate
 Requires at least: 6.0
 Requires PHP: 7.4
-Stable tag: 1.9.0
+Stable tag: 1.10.0
 License: GPLv2 or later
 
 Instant price estimators with lead capture for contractors.
@@ -58,6 +58,19 @@ Every form has a hidden honeypot field, a minimum fill time, and a per-visitor r
 * v3 Invisible: no checkbox. Google scores each request from 0.0 (bot) to 1.0 (person) and requests under the minimum score (0.5 by default) are blocked. Each lead's score is saved and included in the CSV export. The floating badge can be hidden; the required Google notice is then shown under the form.
 
 Create keys at google.com/recaptcha/admin with the same type you choose (v2 and v3 keys are different) and add the site's domain. Tokens are verified on the server and the secret key is never sent to visitors. Google's script loads only on pages with an estimator. If Google cannot be reached, leads are accepted and the problem is written to the PHP error log.
+
+== Dashboard ==
+Estimators > Dashboard shows how estimators perform for any date range (last 7, 30, or 90 days, this month, last month, this year, or custom), for all estimators or one:
+
+* Views, starts, quote requests, conversion rate, booked jobs, close rate, pipeline value, booked value, and average estimate, each compared with the previous period. Month and year ranges compare with the matching calendar period.
+* A daily chart of views and quote requests, and the funnel from view to booked.
+* Where quote requests come from (Google Ads, organic search, direct, and more), with bookings per source and top campaigns.
+* The most chosen project types, styles, colors, and extras.
+* A plain-text summary with a Copy button for client reports.
+
+A 30-day summary also appears on the main WordPress dashboard.
+
+Views and starts are counted in the visitor's browser, so they work with page caching. Each visitor counts once per estimator per day, and logged-in editors and admins are not counted. Only daily totals are stored. Quote requests, bookings, and choices come from leads, so they include all history.
 
 == Lead status and export ==
 Every lead has a status: New, Contacted, Quoted, Booked, or Lost. Change it on the lead screen or for many leads at once with the bulk actions on Estimators > Leads, and filter the list by status. Booked leads can store the real contract amount as "Booked job value". The date each status was first reached is recorded.
@@ -118,6 +131,11 @@ Suggested Google Ads tracking template:
 Disable capture with: add_filter( 'pe_capture_attribution', '__return_false' );
 
 == Changelog ==
+= 1.10.0 =
+* New Estimators > Dashboard with views, starts, quote requests, conversion and close rates, pipeline and booked value, sources, campaigns, and popular choices, compared with the previous period.
+* Copyable summary for client reports and a 30-day widget on the WordPress dashboard.
+* Privacy-friendly view and start tracking that works with page caching.
+
 = 1.9.0 =
 * Reliable CRM webhook delivery: sent after the response, retried with backoff for about 9 hours, with a failure alert email.
 * Delivery log and "Resend now" on each lead, a CRM column, failed-lead notice and filter, and a "Resend to CRM webhook" bulk action.

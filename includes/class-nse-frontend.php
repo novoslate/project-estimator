@@ -54,13 +54,15 @@ class NSE_Frontend {
 		$design = $config['design'];
 
 		return sprintf(
-			'<div class="%s" style="%s" data-id="%d" data-name="%s" data-ts="%d" data-endpoint="%s" data-config="%s"><noscript>Turn on JavaScript to use the price estimator.</noscript></div>',
+			'<div class="%s" style="%s" data-id="%d" data-name="%s" data-ts="%d" data-endpoint="%s" data-track="%s" data-config="%s"><noscript>Turn on JavaScript to use the price estimator.</noscript></div>',
 			esc_attr( NSE_Settings::css_classes( $design ) ),
 			esc_attr( NSE_Settings::css_vars( $design ) ),
 			$id,
 			esc_attr( get_the_title( $post ) ),
 			time(),
 			esc_url( rest_url( 'nse/v1/lead' ) ),
+			/* Editors and admins previewing their own site are not counted in the dashboard. */
+			current_user_can( 'edit_posts' ) ? '' : esc_url( rest_url( 'nse/v1/track' ) ),
 			esc_attr( wp_json_encode( $config ) )
 		);
 	}
