@@ -85,6 +85,10 @@
 .nse .nse-done h4 { margin: 0 0 6px; font-size: 1.15rem; color: var(--nse-ink); }
 .nse-done p { margin: 0; }
 .nse-done ul { margin: 10px 0 0; padding-left: 18px; color: var(--nse-muted); }
+.nse-pdf { margin: 14px 0 0; }
+.nse a.nse-pdf-btn { display: inline-block; padding: 10px 16px; border-radius: var(--nse-inner); background: var(--nse-accent); color: var(--nse-on-accent); font-weight: 600; text-decoration: none; }
+.nse a.nse-pdf-btn:hover { opacity: .92; }
+.nse-pdf-note { margin: 8px 0 0; font-size: .85em; color: var(--nse-muted); }
 .nse-fine { margin: 12px 0 0; font-size: .8em; color: var(--nse-muted); }
 
 .nse-bar { position: sticky; bottom: 0; z-index: 5; display: flex; align-items: center; justify-content: space-between; gap: 12px; margin: 26px -22px 0; padding: 12px 22px; padding-bottom: calc(12px + env(safe-area-inset-bottom, 0px)); background: var(--nse-accent); color: var(--nse-on-accent); border-radius: 0 0 calc(var(--nse-radius) - 1px) calc(var(--nse-radius) - 1px); }

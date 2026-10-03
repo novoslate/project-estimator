@@ -37,11 +37,23 @@ class NSE_Settings {
 		);
 	}
 
+	public static function pdf_defaults() {
+		return array(
+			'enabled'          => true,
+			'send_customer'    => true,
+			'attach_business'  => true,
+			'customer_subject' => 'Your {project} estimate from {business}',
+			'customer_message' => "Hi {first_name},\n\nThank you for your {project} request. Your estimate from {business} is attached as a PDF, along with the details you picked and an illustration of your project.\n\nEstimated price: {low} to {high}\n\nWe will reach out within one business day to set up a free on-site visit. Questions before then? Call us at {phone} or just reply to this email.\n\n{business}",
+		);
+	}
+
 	public static function defaults() {
 		return array(
 			'notify_email' => '',
 			'cc'           => '',
 			'bcc'          => '',
+			'logo_id'      => 0,
+			'pdf'          => self::pdf_defaults(),
 			'design'       => self::design_defaults(),
 		);
 	}
@@ -110,12 +122,26 @@ class NSE_Settings {
 		return $out;
 	}
 
+	public static function sanitize_pdf( $p ) {
+		$p   = is_array( $p ) ? $p : array();
+		$def = self::pdf_defaults();
+		return array(
+			'enabled'          => isset( $p['enabled'] ) ? (bool) $p['enabled'] : $def['enabled'],
+			'send_customer'    => isset( $p['send_customer'] ) ? (bool) $p['send_customer'] : $def['send_customer'],
+			'attach_business'  => isset( $p['attach_business'] ) ? (bool) $p['attach_business'] : $def['attach_business'],
+			'customer_subject' => isset( $p['customer_subject'] ) && '' !== trim( $p['customer_subject'] ) ? sanitize_text_field( $p['customer_subject'] ) : $def['customer_subject'],
+			'customer_message' => isset( $p['customer_message'] ) && '' !== trim( $p['customer_message'] ) ? sanitize_textarea_field( $p['customer_message'] ) : $def['customer_message'],
+		);
+	}
+
 	public static function sanitize( $in ) {
 		$in = is_array( $in ) ? $in : array();
 		return array(
 			'notify_email' => isset( $in['notify_email'] ) ? self::sanitize_emails( $in['notify_email'] ) : '',
 			'cc'           => isset( $in['cc'] ) ? self::sanitize_emails( $in['cc'] ) : '',
 			'bcc'          => isset( $in['bcc'] ) ? self::sanitize_emails( $in['bcc'] ) : '',
+			'logo_id'      => isset( $in['logo_id'] ) ? absint( $in['logo_id'] ) : 0,
+			'pdf'          => self::sanitize_pdf( isset( $in['pdf'] ) ? $in['pdf'] : array() ),
 			'design'       => self::sanitize_design( isset( $in['design'] ) ? $in['design'] : array() ),
 		);
 	}
@@ -132,6 +158,11 @@ class NSE_Settings {
 		if ( isset( $in['design'] ) && is_array( $in['design'] ) ) {
 			foreach ( array( 'show_business_name', 'show_step_numbers', 'sticky_bar' ) as $k ) {
 				$in['design'][ $k ] = ! empty( $in['design'][ $k ] );
+			}
+		}
+		if ( isset( $in['pdf'] ) && is_array( $in['pdf'] ) ) {
+			foreach ( array( 'enabled', 'send_customer', 'attach_business' ) as $k ) {
+				$in['pdf'][ $k ] = ! empty( $in['pdf'][ $k ] );
 			}
 		}
 		return self::sanitize( $in );
@@ -263,7 +294,20 @@ class NSE_Settings {
 		}
 		wp_enqueue_style( 'wp-color-picker' );
 		wp_enqueue_script( 'wp-color-picker' );
-		wp_add_inline_script( 'wp-color-picker', 'jQuery(function($){$(".pe-color").wpColorPicker();});' );
+		wp_enqueue_media();
+		wp_add_inline_script(
+			'wp-color-picker',
+			'jQuery(function($){'
+			. '$(".pe-color").wpColorPicker();'
+			. 'var frame;'
+			. '$("#pe-logo-pick").on("click",function(e){e.preventDefault();'
+			. 'if(!frame){frame=wp.media({title:"Choose a logo",library:{type:"image"},button:{text:"Use this logo"},multiple:false});'
+			. 'frame.on("select",function(){var a=frame.state().get("selection").first().toJSON();'
+			. '$("#pe-logo-id").val(a.id);$("#pe-logo-preview").html("<img src=\\""+(a.sizes&&a.sizes.medium?a.sizes.medium.url:a.url)+"\\" style=\\"max-height:60px;max-width:220px\\">");$("#pe-logo-remove").show();});}'
+			. 'frame.open();});'
+			. '$("#pe-logo-remove").on("click",function(e){e.preventDefault();$("#pe-logo-id").val("0");$("#pe-logo-preview").empty();$(this).hide();});'
+			. '});'
+		);
 	}
 
 	private static function name( $key, $design = false ) {
@@ -302,6 +346,44 @@ class NSE_Settings {
 				esc_html( $row[1] )
 			);
 		}
+		echo '</table>';
+
+		$p    = $s['pdf'];
+		$logo = $s['logo_id'] ? wp_get_attachment_image_url( $s['logo_id'], 'medium' ) : '';
+		echo '<h2>Estimate PDF and customer email</h2>';
+		echo '<p>When someone requests a quote, a branded PDF with their selections, price range, and project illustration is created for the lead.</p>';
+		echo '<table class="form-table" role="presentation">';
+		printf(
+			'<tr><th scope="row">Logo</th><td><input type="hidden" id="pe-logo-id" name="%s" value="%d"><div id="pe-logo-preview" style="margin-bottom:8px">%s</div><button type="button" class="button" id="pe-logo-pick">Choose logo</button> <button type="button" class="button-link" id="pe-logo-remove"%s>Remove</button><p class="description">Shown at the top of the PDF on the accent color band. A PNG with a transparent background works best.</p></td></tr>',
+			self::name( 'logo_id' ), // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- escaped in name().
+			(int) $s['logo_id'],
+			$logo ? '<img src="' . esc_url( $logo ) . '" style="max-height:60px;max-width:220px" alt="">' : '',
+			$logo ? '' : ' style="display:none"'
+		);
+		echo '<tr><th scope="row">PDF</th><td><fieldset>';
+		foreach ( array(
+			'enabled'         => 'Create a PDF estimate for every quote request',
+			'send_customer'   => 'Email the PDF to the customer when they enter an email address',
+			'attach_business' => 'Attach the PDF to the lead email sent to the business',
+		) as $key => $label ) {
+			printf(
+				'<label><input type="checkbox" name="%s" value="1"%s> %s</label><br>',
+				esc_attr( self::OPTION . '[pdf][' . $key . ']' ),
+				checked( $p[ $key ], true, false ),
+				esc_html( $label )
+			);
+		}
+		echo '</fieldset></td></tr>';
+		printf(
+			'<tr><th scope="row"><label for="pe-cs">Customer email subject</label></th><td><input type="text" class="large-text" id="pe-cs" name="%s" value="%s"></td></tr>',
+			esc_attr( self::OPTION . '[pdf][customer_subject]' ),
+			esc_attr( $p['customer_subject'] )
+		);
+		printf(
+			'<tr><th scope="row"><label for="pe-cm">Customer email message</label></th><td><textarea class="large-text" rows="9" id="pe-cm" name="%s">%s</textarea><p class="description">Placeholders: {first_name}, {name}, {business}, {phone}, {project}, {low}, {high}. A link to download the PDF is added below the message.</p></td></tr>',
+			esc_attr( self::OPTION . '[pdf][customer_message]' ),
+			esc_textarea( $p['customer_message'] )
+		);
 		echo '</table>';
 
 		echo '<h2>Design defaults</h2>';

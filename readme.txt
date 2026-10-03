@@ -2,7 +2,7 @@
 Contributors: novoslate
 Requires at least: 6.0
 Requires PHP: 7.4
-Stable tag: 1.5.1
+Stable tag: 1.6.0
 License: GPLv2 or later
 
 Instant price estimators with lead capture for contractors.
@@ -39,6 +39,18 @@ Estimators > Settings holds defaults for every estimator:
 
 Each estimator has a Design card set to "Use global design settings" by default. Switch it to custom to style one estimator differently.
 
+== PDF estimates ==
+Every quote request creates a branded, one-page PDF: logo on the accent color band, the price range, the 3D illustration exactly as the customer configured it, project details (type, style, color, size, extras), the customer's information, next steps, and the fine print.
+
+* The customer gets an email with the PDF attached when they enter an email address. Edit the subject and message under Estimators > Settings, using {first_name}, {name}, {business}, {phone}, {project}, {low}, and {high}.
+* The business lead email gets the same PDF attached.
+* The confirmation screen shows a "Download your estimate (PDF)" button.
+* Each lead in the admin has a "View PDF estimate" button, and the webhook payload includes pdf_url.
+
+The illustration is captured in the visitor's browser when they submit. The server validates and re-encodes it, and recalculates every price itself. PDFs are stored in wp-content/uploads/pe-estimates with random file names and served only through signed links. Deleting a lead deletes its PDF.
+
+Uses FPDF (lib/fpdf), which is free to use, modify, and distribute.
+
 == Live preview ==
 Each project type shows a live 3D-style illustration that updates as visitors change the style, size, and extras. Visitors can switch to a top-down view.
 
@@ -74,6 +86,11 @@ Suggested Google Ads tracking template:
 Disable capture with: add_filter( 'pe_capture_attribution', '__return_false' );
 
 == Changelog ==
+= 1.6.0 =
+* Branded PDF estimates with the project illustration, emailed to the customer and attached to the lead email.
+* Download button on the confirmation screen and a PDF link on each lead.
+* Logo, PDF, and customer email settings under Estimators > Settings.
+
 = 1.5.1 =
 * Preview: side beams under both roof edges on patio covers and enclosures.
 * Preview: enclosure and sunroom side walls now follow the roof slope with no gap at the house.

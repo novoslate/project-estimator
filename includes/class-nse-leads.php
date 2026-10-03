@@ -190,6 +190,7 @@ class NSE_Leads {
 			'color'         => isset( $proj['colors'][ $ci ] ) ? $proj['colors'][ $ci ]['name'] : '',
 			'measurements'  => self::measurements( $proj, $dims ),
 			'quantity'      => $est['qty'] . ' ' . $proj['unit_label'],
+			'size'          => implode( ' x ', array_map( function ( $d ) { return $d . ' ft'; }, $dims ) ) . ( count( $dims ) > 1 ? ' (' . $est['qty'] . ' ' . $proj['unit_label'] . ')' : '' ),
 			'extras'        => array_map(
 				function ( $i ) use ( $proj ) {
 					return $proj['addons'][ $i ]['name'];
@@ -227,12 +228,21 @@ class NSE_Leads {
 		}
 		$lead['lead_id'] = $lead_id;
 
-		self::notify( $c, $lead );
+		// Branded PDF estimate with the visitor's illustration.
+		$pdf_path        = NSE_Pdf::create( $lead_id, $lead, $c, isset( $p['illustration'] ) ? $p['illustration'] : '' );
+		$lead['pdf_url'] = $pdf_path ? NSE_Pdf::url( $lead_id ) : '';
+		update_post_meta( $lead_id, self::META_KEY, $lead );
+
+		self::notify( $c, $lead, $pdf_path );
+		if ( $pdf_path ) {
+			self::email_customer( $c, $lead, $pdf_path );
+		}
 
 		return rest_ensure_response(
 			array(
 				'ok'      => true,
 				'lead_id' => $lead_id,
+				'pdf_url' => $lead['pdf_url'],
 				'low'     => $est['low'],
 				'high'    => $est['high'],
 			)
@@ -251,7 +261,7 @@ class NSE_Leads {
 		return '$' . number_format( (float) $n );
 	}
 
-	private static function notify( $c, $lead ) {
+	private static function notify( $c, $lead, $pdf_path = '' ) {
 		$rcpt = NSE_Settings::recipients( $c );
 
 		$lines = array(
@@ -293,7 +303,13 @@ class NSE_Leads {
 		foreach ( $rcpt['bcc'] as $addr ) {
 			$headers[] = 'Bcc: ' . $addr;
 		}
-		wp_mail( $rcpt['to'], 'New ' . strtolower( $lead['project'] ) . ' quote request: ' . $lead['name'], implode( "\n", $lines ), $headers );
+		if ( ! empty( $lead['pdf_url'] ) ) {
+			$lines[] = '';
+			$lines[] = 'PDF estimate: ' . $lead['pdf_url'];
+		}
+		$settings    = NSE_Settings::get();
+		$attachments = ( $pdf_path && $settings['pdf']['attach_business'] ) ? array( $pdf_path ) : array();
+		wp_mail( $rcpt['to'], 'New ' . strtolower( $lead['project'] ) . ' quote request: ' . $lead['name'], implode( "\n", $lines ), $headers, $attachments );
 
 		if ( $c['business']['webhook_url'] ) {
 			wp_remote_post(
@@ -306,6 +322,43 @@ class NSE_Leads {
 				)
 			);
 		}
+	}
+
+	/**
+	 * Send the customer their PDF estimate, when they gave an email and the setting is on.
+	 */
+	private static function email_customer( $c, $lead, $pdf_path ) {
+		$settings = NSE_Settings::get();
+		if ( empty( $settings['pdf']['send_customer'] ) || empty( $lead['email'] ) || ! is_email( $lead['email'] ) ) {
+			return;
+		}
+		$parts = preg_split( '/\s+/', trim( $lead['name'] ) );
+		$vars  = array(
+			'{first_name}' => $parts ? $parts[0] : $lead['name'],
+			'{name}'       => $lead['name'],
+			'{business}'   => $c['business']['name'],
+			'{phone}'      => $c['business']['phone'] ? $c['business']['phone'] : 'the number on our website',
+			'{project}'    => strtolower( $lead['project'] ),
+			'{low}'        => self::money( $lead['estimate_low'] ),
+			'{high}'       => self::money( $lead['estimate_high'] ),
+		);
+		$subj_tpl = $settings['pdf']['customer_subject'];
+		$body_tpl = $settings['pdf']['customer_message'];
+		if ( '.' === substr( $c['business']['name'], -1 ) ) {
+			/* Avoid "Co.." when the business name already ends with a period. */
+			$subj_tpl = str_replace( '{business}.', '{business}', $subj_tpl );
+			$body_tpl = str_replace( '{business}.', '{business}', $body_tpl );
+		}
+		$subject = ucfirst( strtr( $subj_tpl, $vars ) );
+		$body    = strtr( $body_tpl, $vars );
+		$body   .= "\n\nDownload your estimate anytime: " . $lead['pdf_url'];
+
+		$rcpt    = NSE_Settings::recipients( $c );
+		$headers = array();
+		if ( ! empty( $rcpt['to'][0] ) ) {
+			$headers[] = 'Reply-To: ' . $c['business']['name'] . ' <' . $rcpt['to'][0] . '>';
+		}
+		wp_mail( $lead['email'], $subject, $body, $headers, array( $pdf_path ) );
 	}
 
 	/**
@@ -371,6 +424,9 @@ class NSE_Leads {
 			'Source'         => isset( $lead['source'] ) ? $lead['source'] : '',
 		);
 		$rows += self::attribution_rows( isset( $lead['attribution'] ) ? $lead['attribution'] : array() );
+		if ( NSE_Pdf::path_for( $post->ID ) ) {
+			printf( '<p><a class="button" href="%s" target="_blank" rel="noopener">View PDF estimate</a></p>', esc_url( NSE_Pdf::url( $post->ID ) ) );
+		}
 		echo '<table class="widefat striped"><tbody>';
 		foreach ( $rows as $label => $val ) {
 			if ( '' === (string) $val ) {

@@ -2,7 +2,7 @@
 /**
  * Plugin Name:       Project Estimator
  * Description:       Instant price estimators with lead capture. Includes templates for patio covers, landscaping, artificial turf, pavers, and fencing.
- * Version:           1.5.1
+ * Version:           1.6.0
  * Author:            Novoslate
  * Author URI:        https://novoslate.com
  * Text Domain:       project-estimator
@@ -16,7 +16,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-define( 'NSE_VERSION', '1.5.1' );
+define( 'NSE_VERSION', '1.6.0' );
 define( 'NSE_PATH', plugin_dir_path( __FILE__ ) );
 define( 'NSE_URL', plugin_dir_url( __FILE__ ) );
 
@@ -35,6 +35,7 @@ require_once NSE_PATH . 'includes/class-nse-config.php';
 require_once NSE_PATH . 'includes/class-nse-admin.php';
 require_once NSE_PATH . 'includes/class-nse-frontend.php';
 require_once NSE_PATH . 'includes/class-nse-leads.php';
+require_once NSE_PATH . 'includes/class-nse-pdf.php';
 
 // Updates from GitHub releases.
 require_once NSE_PATH . 'lib/plugin-update-checker/plugin-update-checker.php';
@@ -54,6 +55,7 @@ NSE_Admin::init();
 NSE_Settings::init();
 NSE_Frontend::init();
 NSE_Leads::init();
+NSE_Pdf::init();
 
 register_activation_hook(
 	__FILE__,

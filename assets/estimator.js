@@ -311,18 +311,56 @@
 			} })
 		]));
 
+		function previewOpts() {
+			var o = opts[state.opt];
+			return {
+				scene: proj.preview,
+				variant: o && o.variant ? o.variant : '',
+				dims: state.dims.slice(),
+				max: dims.map(function (d) { return Number(d.max); }),
+				features: addons.filter(function (a, i) { return state.addons[i]; }).map(function (a) { return a.feature || 'none'; }),
+				color: colors[state.color] ? colors[state.color].hex : null
+			};
+		}
+
+		/* Render the 3D illustration off screen and return it as a JPEG data URL for the PDF ('' if unavailable). */
+		function snapshot() {
+			return new Promise(function (resolve) {
+				var done = false;
+				function finish(v) { if (!done) { done = true; resolve(v); } }
+				try {
+					if (!has3d()) return finish('');
+					var W = 1200, H = 780;
+					var off = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+					window.PEPreview.render(off, previewOpts());
+					off.setAttribute('xmlns', 'http://www.w3.org/2000/svg');
+					off.setAttribute('width', W);
+					off.setAttribute('height', H);
+					var img = new Image();
+					img.onload = function () {
+						try {
+							var cv = document.createElement('canvas');
+							cv.width = W; cv.height = H;
+							var ctx = cv.getContext('2d');
+							ctx.fillStyle = '#E7E0CF';
+							ctx.fillRect(0, 0, W, H);
+							ctx.drawImage(img, 0, 0, W, H);
+							var url = cv.toDataURL('image/jpeg', 0.86);
+							finish(url.length < 2900000 ? url : '');
+						} catch (e) { finish(''); }
+					};
+					img.onerror = function () { finish(''); };
+					img.src = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(new XMLSerializer().serializeToString(off));
+					setTimeout(function () { finish(''); }, 4000);
+				} catch (e) { finish(''); }
+			});
+		}
+
 		function drawVisual() {
 			var picked = addons.filter(function (a, i) { return state.addons[i]; });
 			if (has3d() && view === '3d') {
 				var o = opts[state.opt];
-				window.PEPreview.render(svg, {
-					scene: proj.preview,
-					variant: o && o.variant ? o.variant : '',
-					dims: state.dims.slice(),
-					max: dims.map(function (d) { return Number(d.max); }),
-					features: picked.map(function (a) { return a.feature || 'none'; }),
-					color: colors[state.color] ? colors[state.color].hex : null
-				});
+				window.PEPreview.render(svg, previewOpts());
 				svg.setAttribute('aria-label', 'Illustration of your ' + proj.name.toLowerCase() + (o ? ', ' + o.name : '') + (colors[state.color] ? ', ' + colors[state.color].name : ''));
 			} else {
 				svg.setAttribute('viewBox', '0 0 400 220');
@@ -414,11 +452,15 @@
 				page: window.location.href,
 				attribution: attribution()
 			};
-			fetch(root.getAttribute('data-endpoint'), {
-				method: 'POST',
-				headers: { 'Content-Type': 'application/json' },
-				body: JSON.stringify(payload)
-			})
+			snapshot()
+				.then(function (illustration) {
+					payload.illustration = illustration;
+					return fetch(root.getAttribute('data-endpoint'), {
+						method: 'POST',
+						headers: { 'Content-Type': 'application/json' },
+						body: JSON.stringify(payload)
+					});
+				})
 				.then(function (r) { return r.json().then(function (j) { return { ok: r.ok, j: j }; }); })
 				.then(function (res) {
 					if (!res.ok || !res.j.ok) throw new Error(res.j && res.j.message ? res.j.message : '');
@@ -433,6 +475,12 @@
 					done.appendChild(h('h4', { text: 'Request sent' }));
 					done.appendChild(h('p', { text: cfg.success_message }));
 					done.appendChild(list);
+					if (res.j.pdf_url) {
+						done.appendChild(h('p', { class: 'nse-pdf' }, [
+							h('a', { class: 'nse-pdf-btn', href: res.j.pdf_url, target: '_blank', rel: 'noopener', text: 'Download your estimate (PDF)' })
+						]));
+						if (payload.email) done.appendChild(h('p', { class: 'nse-pdf-note', text: 'We also emailed a copy to ' + payload.email + '.' }));
+					}
 					done.hidden = false;
 					done.focus();
 					fireConversion(res.j, payload);
