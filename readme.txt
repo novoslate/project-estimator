@@ -2,7 +2,7 @@
 Contributors: novoslate
 Requires at least: 6.0
 Requires PHP: 7.4
-Stable tag: 1.6.1
+Stable tag: 1.6.2
 License: GPLv2 or later
 
 Instant price estimators with lead capture for contractors.
@@ -47,6 +47,8 @@ Every quote request creates a branded, one-page PDF: logo on the accent color ba
 * The confirmation screen shows a "Download your estimate (PDF)" button.
 * Each lead in the admin has a "View PDF estimate" button, and the webhook payload includes pdf_url.
 
+The website shown in the PDF header and footer defaults to this site's domain. Set "Website shown on PDF" under Estimators > Settings to show a different one, for example the main website when the estimator runs on an ads subdomain.
+
 The illustration is captured in the visitor's browser when they submit. The server validates and re-encodes it, and recalculates every price itself. PDFs are stored in wp-content/uploads/pe-estimates with random file names and served only through signed links. Deleting a lead deletes its PDF.
 
 Uses FPDF (lib/fpdf), which is free to use, modify, and distribute.
@@ -86,6 +88,11 @@ Suggested Google Ads tracking template:
 Disable capture with: add_filter( 'pe_capture_attribution', '__return_false' );
 
 == Changelog ==
+= 1.6.2 =
+* New "Website shown on PDF" setting for the PDF header and footer.
+* Better spacing around the PDF download button on the confirmation screen.
+* Confirmation heading stays bold and proportional in any theme.
+
 = 1.6.1 =
 * Fix: quote submissions failed with a critical error in 1.6.0 (an admin-only WordPress function was used while building the PDF).
 * A PDF problem can no longer block a lead or its emails. Problems are written to the PHP error log instead.

@@ -263,7 +263,7 @@ class NSE_Pdf {
 		$ink    = array( 29, 43, 46 );
 		$muted  = array( 93, 111, 114 );
 		$soft   = self::rgb( NSE_Settings::mix( '#FFFFFF', $design['accent'], 0.08 ) );
-		$site   = wp_parse_url( home_url(), PHP_URL_HOST );
+		$site   = NSE_Settings::website();
 
 		$pdf             = new NSE_Fpdf( 'P', 'mm', 'Letter' );
 		$pdf->footer_txt = self::t( implode( '   |   ', array_filter( array( $biz['name'], $biz['phone'], $site ) ) ) );

@@ -53,6 +53,7 @@ class NSE_Settings {
 			'cc'           => '',
 			'bcc'          => '',
 			'logo_id'      => 0,
+			'website'      => '',
 			'pdf'          => self::pdf_defaults(),
 			'design'       => self::design_defaults(),
 		);
@@ -102,6 +103,29 @@ class NSE_Settings {
 		return implode( ', ', array_slice( $out, 0, 10 ) );
 	}
 
+	/**
+	 * Website as shown to people: "rkcconstruction.com" from "https://www.rkcconstruction.com/" style input.
+	 * Keeps "www." if entered, drops the scheme and trailing slash.
+	 */
+	public static function sanitize_website( $raw ) {
+		$w = strtolower( trim( sanitize_text_field( (string) $raw ) ) );
+		$w = preg_replace( '#^[a-z][a-z0-9+.-]*://#', '', $w );
+		$w = rtrim( $w, '/' );
+		return preg_match( '#^[a-z0-9-]+(\.[a-z0-9-]+)+(/[a-z0-9._~/-]*)?$#', $w ) ? substr( $w, 0, 120 ) : '';
+	}
+
+	/**
+	 * Website for PDFs: the setting, or this site's own domain.
+	 */
+	public static function website() {
+		$s = self::get();
+		if ( $s['website'] ) {
+			return $s['website'];
+		}
+		$host = wp_parse_url( home_url(), PHP_URL_HOST );
+		return $host ? $host : '';
+	}
+
 	public static function sanitize_design( $d ) {
 		$d   = is_array( $d ) ? $d : array();
 		$def = self::design_defaults();
@@ -141,6 +165,7 @@ class NSE_Settings {
 			'cc'           => isset( $in['cc'] ) ? self::sanitize_emails( $in['cc'] ) : '',
 			'bcc'          => isset( $in['bcc'] ) ? self::sanitize_emails( $in['bcc'] ) : '',
 			'logo_id'      => isset( $in['logo_id'] ) ? absint( $in['logo_id'] ) : 0,
+			'website'      => isset( $in['website'] ) ? self::sanitize_website( $in['website'] ) : '',
 			'pdf'          => self::sanitize_pdf( isset( $in['pdf'] ) ? $in['pdf'] : array() ),
 			'design'       => self::sanitize_design( isset( $in['design'] ) ? $in['design'] : array() ),
 		);
@@ -360,6 +385,13 @@ class NSE_Settings {
 			esc_attr( $d['accent'] ),
 			$logo ? '<img src="' . esc_url( $logo ) . '" style="max-height:60px;max-width:220px" alt="">' : '',
 			$logo ? '' : ' style="display:none"'
+		);
+		printf(
+			'<tr><th scope="row"><label for="pe-website">Website shown on PDF</label></th><td><input type="text" class="regular-text" id="pe-website" name="%s" value="%s" placeholder="%s"><p class="description">Shown in the PDF header and footer. Use this when the estimator runs on a landing page subdomain but customers should see the main website. Leave blank to use %s.</p></td></tr>',
+			self::name( 'website' ), // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- escaped in name().
+			esc_attr( $s['website'] ),
+			esc_attr( wp_parse_url( home_url(), PHP_URL_HOST ) ),
+			esc_html( wp_parse_url( home_url(), PHP_URL_HOST ) )
 		);
 		echo '<tr><th scope="row">PDF</th><td><fieldset>';
 		foreach ( array(
