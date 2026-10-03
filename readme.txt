@@ -2,7 +2,7 @@
 Contributors: novoslate
 Requires at least: 6.0
 Requires PHP: 7.4
-Stable tag: 1.11.0
+Stable tag: 1.12.0
 License: GPLv2 or later
 
 Instant price estimators with lead capture for contractors.
@@ -105,6 +105,15 @@ The illustration is captured in the visitor's browser when they submit. The serv
 
 Uses FPDF (lib/fpdf), which is free to use, modify, and distribute.
 
+== Step by step layout ==
+The Layout design setting (site-wide under Estimators > Settings, or per estimator with a custom design) chooses how the estimator is shown:
+
+* Step by step on phones (default): one question per screen with a progress bar when the estimator is narrower than 640 px, including narrow page columns on desktop. Wider layouts show the single page.
+* Step by step on all screens.
+* Single page on all screens.
+
+In step by step mode, tapping a project type, style, or color moves on automatically, Back and Next buttons move between steps, and the 3D preview stays on screen above the style, color, size, and extras steps. The sticky price bar stays visible, and its button jumps to the contact step. Each step sends a project_estimator_step event (step, step_number, step_total) to the dataLayer for funnel reports in GA4.
+
 == Live preview ==
 Each project type shows a live 3D-style illustration that updates as visitors change the style, size, and extras. Visitors can switch to a top-down view.
 
@@ -140,6 +149,12 @@ Suggested Google Ads tracking template:
 Disable capture with: add_filter( 'pe_capture_attribution', '__return_false' );
 
 == Changelog ==
+= 1.12.0 =
+* Step by step layout: one question per screen with a progress bar, auto-advance, and the 3D preview kept on screen. On by default for phones and narrow columns.
+* New Layout design setting (phones only, all screens, or single page).
+* project_estimator_step dataLayer events for funnel reports.
+* More compact price bar on small phones.
+
 = 1.11.0 =
 * New Estimators > Import / Export for copying estimators and site-wide settings (including the logo) between sites, with a review step before importing.
 * Duplicate and Export row actions on the Estimators list.

@@ -118,3 +118,34 @@ body:has(.nse--rc-hidden) .grecaptcha-badge { visibility: hidden; }
 .nse.nse--flat .nse-bar, .nse.nse--flat .nse-bar:last-child { margin-left: 0; margin-right: 0; border-radius: var(--nse-inner); }
 .nse.nse--no-steps .nse-n { display: none; }
 .nse.nse--static-bar .nse-bar { position: static; }
+
+/* Step by step layout */
+.nse-progress { margin: 18px 0 4px; }
+.nse-progress-l { font-size: .85em; font-weight: 600; color: var(--nse-muted); margin-bottom: 6px; }
+.nse-progress-t { height: 6px; border-radius: 3px; background: var(--nse-line); overflow: hidden; }
+.nse-progress-b { height: 100%; width: 0; border-radius: 3px; background: var(--nse-accent); transition: width .25s ease; }
+.nse-stage { margin-top: 14px; }
+.nse.nse--stepped .nse-sec[data-step] { display: none; }
+.nse.nse--stepped .nse-sec[data-step].is-current { display: block; margin-top: 16px; }
+.nse.nse--stepped .nse-n { display: none; }
+.nse.nse--stepped .nse-step:focus { outline: none; }
+.nse.nse--stepped .nse-step:focus-visible { outline: 3px solid #F2B43A; outline-offset: 4px; }
+.nse-stepnav { display: flex; gap: 10px; margin-top: 20px; }
+.nse button.nse-back, .nse button.nse-next { all: unset; box-sizing: border-box; cursor: pointer; text-align: center; padding: 13px 18px; border-radius: var(--nse-inner); font: inherit; font-weight: 600; line-height: 1.2; }
+.nse button.nse-back { border: 1px solid var(--nse-line); color: var(--nse-ink); background: var(--nse-bg); }
+.nse button.nse-next { margin-left: auto; flex: 1; max-width: 320px; background: var(--nse-accent); color: var(--nse-on-accent); }
+.nse button.nse-back[hidden], .nse button.nse-next[hidden] { display: none; }
+.nse button.nse-back:focus-visible, .nse button.nse-next:focus-visible { outline: 3px solid #F2B43A; outline-offset: 2px; }
+@media (prefers-reduced-motion: reduce) { .nse-progress-b { transition: none; } }
+.nse.nse--stepped.nse--past-first .nse-intro { display: none; }
+.nse.nse--stepped.nse--past-first .nse-title { font-size: 1.3rem; }
+.nse.nse--stepped.nse--at-contact .nse-bar-btn { display: none; }
+.nse-stage .nse-caption { margin: 6px 0 0; }
+.nse-bar small, .nse-bar strong { white-space: nowrap; }
+@media (max-width: 480px) {
+	.nse-bar { padding-top: 10px; padding-bottom: calc(10px + env(safe-area-inset-bottom, 0px)); }
+	.nse-bar small { font-size: .72em; }
+	.nse-bar strong { font-size: 1.02rem; }
+	.nse button.nse-bar-btn { padding: 8px 11px; font-size: .82em; }
+}
+

@@ -123,7 +123,7 @@
 		}
 
 		function stepTitle(label, id) {
-			return h('h3', { class: 'nse-step', id: id }, [h('span', { class: 'nse-n', 'aria-hidden': 'true' }), label]);
+			return h('h3', { class: 'nse-step', id: id, tabindex: '-1' }, [h('span', { class: 'nse-n', 'aria-hidden': 'true' }), label]);
 		}
 		function renumber() {
 			var ns = root.querySelectorAll('.nse-n');
@@ -140,7 +140,7 @@
 		/* Step: project type (only with 2 or more) */
 		var projBtns = [];
 		if (multi) {
-			root.appendChild(h('section', { class: 'nse-sec', 'aria-labelledby': uid + '-p' }, [
+			root.appendChild(h('section', { class: 'nse-sec', 'data-step': 'project', 'aria-labelledby': uid + '-p' }, [
 				stepTitle(cfg.project_label || 'What are you planning?', uid + '-p'),
 				h('div', { class: 'nse-options nse-projects' }, projects.map(function (p, i) {
 					var b = h('button', { type: 'button', class: 'nse-opt nse-proj', onclick: function () {
@@ -172,7 +172,7 @@
 
 			/* Choices */
 			if (opts.length) {
-				projBody.appendChild(h('section', { class: 'nse-sec', 'aria-labelledby': uid + '-o' }, [
+				projBody.appendChild(h('section', { class: 'nse-sec', 'data-step': 'options', 'aria-labelledby': uid + '-o' }, [
 					stepTitle(proj.options_label || 'Choose a style', uid + '-o'),
 					h('div', { class: 'nse-options' }, opts.map(function (o, i) {
 						var b = h('button', { type: 'button', class: 'nse-opt', onclick: function () { state.opt = i; update(); } }, [
@@ -188,7 +188,7 @@
 			/* Colors */
 			colorBtns = [];
 			if (colors.length) {
-				projBody.appendChild(h('section', { class: 'nse-sec', 'aria-labelledby': uid + '-c' }, [
+				projBody.appendChild(h('section', { class: 'nse-sec', 'data-step': 'colors', 'aria-labelledby': uid + '-c' }, [
 					stepTitle(proj.colors_label || 'Choose a color', uid + '-c'),
 					h('div', { class: 'nse-colors' }, colors.map(function (c, i) {
 						var b = h('button', { type: 'button', class: 'nse-color', onclick: function () { state.color = i; update(); } }, [
@@ -227,7 +227,7 @@
 					return b;
 				}));
 			}
-			projBody.appendChild(h('section', { class: 'nse-sec', 'aria-labelledby': uid + '-m' }, [
+			projBody.appendChild(h('section', { class: 'nse-sec', 'data-step': 'size', 'aria-labelledby': uid + '-m' }, [
 				stepTitle('Set the size', uid + '-m'),
 				h('div', { class: 'nse-box' }, [
 					h('div', { class: 'nse-visual' }, [svg, toggle]),
@@ -239,7 +239,7 @@
 
 			/* Extras */
 			if (addons.length) {
-				projBody.appendChild(h('section', { class: 'nse-sec', 'aria-labelledby': uid + '-a' }, [
+				projBody.appendChild(h('section', { class: 'nse-sec', 'data-step': 'extras', 'aria-labelledby': uid + '-a' }, [
 					stepTitle(proj.addons_label || 'Add extras', uid + '-a'),
 					h('div', { class: 'nse-addons' }, addons.map(function (a, i) {
 						return h('label', { class: 'nse-addon' }, [
@@ -251,7 +251,9 @@
 				]));
 			}
 			renumber();
+			afterBuild();
 		}
+		var afterBuild = function () {};
 
 		function drawPlan() {
 			while (svg.firstChild) svg.removeChild(svg.firstChild);
@@ -326,7 +328,7 @@
 
 		var form = h('form', { class: 'nse-form', novalidate: true }, formKids);
 		var done = h('div', { class: 'nse-done', tabindex: '-1', hidden: true });
-		var quoteSec = h('section', { class: 'nse-sec', 'aria-labelledby': uid + '-q' }, [
+		var quoteSec = h('section', { class: 'nse-sec', 'data-step': 'contact', 'aria-labelledby': uid + '-q' }, [
 			stepTitle('Get your exact quote', uid + '-q'), form, done,
 			cfg.disclaimer || biz.phone ? h('p', { class: 'nse-fine', text: [cfg.disclaimer, biz.phone ? 'Prefer to talk? Call ' + biz.phone + '.' : ''].filter(Boolean).join(' ') }) : null
 		]);
@@ -374,13 +376,128 @@
 
 		/* Sticky price bar */
 		var rangeEl = h('strong', {});
-		root.appendChild(h('div', { class: 'nse-bar', role: 'status', 'aria-live': 'polite' }, [
+		var barEl = h('div', { class: 'nse-bar', role: 'status', 'aria-live': 'polite' }, [
 			h('div', {}, [h('small', { text: 'Estimated price range' }), rangeEl]),
 			h('button', { type: 'button', class: 'nse-bar-btn', text: 'Get exact quote', onclick: function () {
-				quoteSec.scrollIntoView({ behavior: 'smooth', block: 'start' });
+				if (stepped) {
+					showStep('contact', true);
+				} else {
+					quoteSec.scrollIntoView({ behavior: 'smooth', block: 'start' });
+				}
 				if (inputs.name && !form.hidden) setTimeout(function () { inputs.name.focus({ preventScroll: true }); }, 400);
 			} })
-		]));
+		]);
+		root.appendChild(barEl);
+
+		/* ---------- Step by step layout ---------- */
+		var layoutMode = (cfg.design && cfg.design.layout) || 'single';
+		var stepped = false, stepKey = null, advTimer = null;
+		var progLabel = h('div', { class: 'nse-progress-l' });
+		var progFill = h('div', { class: 'nse-progress-b' });
+		var progress = h('div', { class: 'nse-progress', hidden: true }, [progLabel, h('div', { class: 'nse-progress-t', 'aria-hidden': 'true' }, [progFill])]);
+		var stage = h('div', { class: 'nse-stage', hidden: true });
+		var backBtn = h('button', { type: 'button', class: 'nse-back', text: 'Back', onclick: function () { go(-1); } });
+		var nextBtn = h('button', { type: 'button', class: 'nse-next', text: 'Next', onclick: function () { go(1); } });
+		var nav = h('div', { class: 'nse-stepnav', hidden: true }, [backBtn, nextBtn]);
+		var headEl = root.querySelector('.nse-head');
+		root.insertBefore(progress, headEl.nextSibling);
+		root.insertBefore(stage, progress.nextSibling);
+		root.insertBefore(nav, barEl);
+
+		function stepList() { return Array.prototype.slice.call(root.querySelectorAll('.nse-sec[data-step]')); }
+		function stepIndex(list, key) {
+			for (var i = 0; i < list.length; i++) if (list[i].getAttribute('data-step') === key) return i;
+			return -1;
+		}
+		function titleOf(sec) {
+			var hd = sec.querySelector('.nse-step');
+			return hd && hd.lastChild ? hd.lastChild.textContent : '';
+		}
+		function wantStepped() {
+			return layoutMode === 'always' || (layoutMode === 'mobile' && root.clientWidth > 0 && root.clientWidth < 640);
+		}
+		/* Keep the 3D preview on screen above the steps where it helps (style, color, size, extras). */
+		function placeVisual() {
+			var vis = root.querySelector('.nse-visual');
+			var cap = root.querySelector('.nse-caption');
+			var home = root.querySelector('.nse-sec[data-step="size"] .nse-box');
+			if (!vis) return;
+			var useStage = stepped && has3d() && stepKey !== 'project' && stepKey !== 'contact';
+			if (useStage) {
+				if (vis.parentNode !== stage) stage.appendChild(vis);
+				if (cap && cap.parentNode !== stage) stage.appendChild(cap);
+				stage.hidden = false;
+			} else {
+				stage.hidden = true;
+				if (home && vis.parentNode !== home) home.insertBefore(vis, home.firstChild);
+				if (cap && home && cap.parentNode !== home) {
+					var chips = home.querySelector('.nse-chips');
+					home.insertBefore(cap, chips ? chips.nextSibling : vis.nextSibling);
+				}
+			}
+		}
+		function showStep(key, userAction) {
+			var list = stepList();
+			if (!list.length) return;
+			var idx = stepIndex(list, key);
+			if (idx < 0) idx = Math.min(Math.max(0, stepIndex(list, stepKey)), list.length - 1);
+			if (idx < 0) idx = 0;
+			stepKey = list[idx].getAttribute('data-step');
+			list.forEach(function (sec, i) { sec.classList.toggle('is-current', i === idx); });
+			progLabel.textContent = 'Step ' + (idx + 1) + ' of ' + list.length;
+			progress.setAttribute('aria-label', 'Step ' + (idx + 1) + ' of ' + list.length + ': ' + titleOf(list[idx]));
+			root.classList.toggle('nse--past-first', idx > 0);
+			root.classList.toggle('nse--at-contact', stepKey === 'contact');
+			progFill.style.width = Math.round(100 * (idx + 1) / list.length) + '%';
+			backBtn.hidden = idx === 0;
+			nextBtn.hidden = idx === list.length - 1;
+			nextBtn.textContent = idx === list.length - 2 ? 'Next: your details' : 'Next';
+			placeVisual();
+			if (userAction) {
+				var hd = list[idx].querySelector('.nse-step');
+				if (hd) hd.focus({ preventScroll: true });
+				if (progress.getBoundingClientRect().top < 0) progress.scrollIntoView({ behavior: 'smooth', block: 'start' });
+				push({ event: 'project_estimator_step', estimator_id: estId, estimator_name: estName, step: stepKey, step_number: idx + 1, step_total: list.length });
+			}
+		}
+		function go(delta) {
+			var list = stepList();
+			var idx = stepIndex(list, stepKey);
+			var n = Math.max(0, Math.min(list.length - 1, idx + delta));
+			showStep(list[n].getAttribute('data-step'), true);
+		}
+		function layout() {
+			stepped = wantStepped();
+			root.classList.toggle('nse--stepped', stepped);
+			progress.hidden = !stepped;
+			nav.hidden = !stepped;
+			if (stepped) {
+				showStep(stepKey || (stepList()[0] && stepList()[0].getAttribute('data-step')), false);
+			} else {
+				stepList().forEach(function (sec) { sec.classList.remove('is-current'); });
+				root.classList.remove('nse--past-first', 'nse--at-contact');
+				placeVisual();
+			}
+		}
+		afterBuild = function () { if (stepped) showStep(stepKey, false); else placeVisual(); };
+
+		/* Tapping a project type, style, or color moves on to the next step. */
+		root.addEventListener('click', function (e) {
+			if (!stepped || !e.target.closest) return;
+			var btn = e.target.closest('.nse-opt, .nse-color');
+			var sec = btn ? btn.closest('.nse-sec[data-step]') : null;
+			if (!sec || sec.getAttribute('data-step') !== stepKey) return;
+			clearTimeout(advTimer);
+			advTimer = setTimeout(function () { go(1); }, 320);
+		});
+
+		var resizeTimer = null;
+		window.addEventListener('resize', function () {
+			if (layoutMode !== 'mobile') return;
+			clearTimeout(resizeTimer);
+			resizeTimer = setTimeout(function () { if (wantStepped() !== stepped) layout(); }, 150);
+		});
+		layout();
 
 		function previewOpts() {
 			var o = opts[state.opt];
@@ -564,6 +681,11 @@
 						if (payload.email) done.appendChild(h('p', { class: 'nse-pdf-note', text: 'We also emailed a copy to ' + payload.email + '.' }));
 					}
 					done.hidden = false;
+					if (stepped) {
+						nav.hidden = true;
+						progLabel.textContent = 'Done: request sent';
+						progFill.style.width = '100%';
+					}
 					done.focus();
 					fireConversion(res.j, payload);
 				})

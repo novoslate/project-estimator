@@ -23,6 +23,7 @@ class NSE_Settings {
 	public static function design_defaults() {
 		return array(
 			'style'              => 'card',
+			'layout'             => 'mobile',
 			'accent'             => '#1E3A3F',
 			'text'               => '#1D2B2E',
 			'muted'              => '#5D6F72',
@@ -73,6 +74,11 @@ class NSE_Settings {
 				'card'   => 'Card (border)',
 				'shadow' => 'Card (soft shadow)',
 				'flat'   => 'Flat (blends into the page)',
+			),
+			'layout' => array(
+				'mobile' => 'Step by step on phones, single page on larger screens',
+				'always' => 'Step by step on all screens',
+				'single' => 'Single page on all screens',
 			),
 			'font'   => array(
 				'inherit' => 'Match the theme',
@@ -140,6 +146,7 @@ class NSE_Settings {
 			$out[ $k ] = $hex ? $hex : $def[ $k ];
 		}
 		$out['style']     = ( isset( $d['style'] ) && isset( $ch['style'][ $d['style'] ] ) ) ? $d['style'] : $def['style'];
+		$out['layout']    = ( isset( $d['layout'] ) && isset( $ch['layout'][ $d['layout'] ] ) ) ? $d['layout'] : $def['layout'];
 		$out['font']      = ( isset( $d['font'] ) && isset( $ch['font'][ $d['font'] ] ) ) ? $d['font'] : $def['font'];
 		$out['radius']    = isset( $d['radius'] ) ? max( 0, min( 30, (int) $d['radius'] ) ) : $def['radius'];
 		$out['max_width'] = isset( $d['max_width'] ) ? max( 320, min( 1600, (int) $d['max_width'] ) ) : $def['max_width'];
@@ -497,6 +504,8 @@ class NSE_Settings {
 		echo '<h2>Design defaults</h2>';
 		echo '<table class="form-table" role="presentation">';
 		self::select_row( 'Style', 'style', $ch['style'], $d['style'] );
+		self::select_row( 'Layout', 'layout', $ch['layout'], $d['layout'] );
+		echo '<tr><td></td><td style="padding-top:0"><p class="description">Step by step shows one question per screen with a progress bar and the 3D preview kept on screen. "Phones" also applies when the estimator sits in a narrow column.</p></td></tr>';
 		foreach ( array(
 			'accent'     => array( 'Accent color', 'Buttons, selected options, and the price bar. Text on it switches between white and dark automatically.' ),
 			'text'       => array( 'Text color', '' ),

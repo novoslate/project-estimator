@@ -229,6 +229,7 @@
 		return card('Design', modes +
 			'<div class="nse-grid">' +
 			select('Style', 'design.style', pairs(DC.style)) +
+			select('Layout', 'design.layout', pairs(DC.layout)) +
 			text('Accent color', 'design.accent', { type: 'color', help: 'Buttons, selections, and the price bar.' }) +
 			text('Text color', 'design.text', { type: 'color' }) +
 			text('Secondary text color', 'design.muted', { type: 'color' }) +
