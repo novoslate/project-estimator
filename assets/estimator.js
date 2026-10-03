@@ -143,7 +143,9 @@
 		/* Project-specific steps: rebuilt when the project type changes */
 		var projBody = h('div', { class: 'nse-project-body' });
 		root.appendChild(projBody);
-		var optBtns = [], outs = [], svg, qtyEl;
+		var optBtns = [], outs = [], svg, qtyEl, chipsEl, viewBtns = [];
+		var view = '3d';
+		function has3d() { return (proj.preview || 'plan') !== 'plan' && !!window.PEPreview; }
 
 		function buildProject() {
 			projBody.innerHTML = '';
@@ -178,9 +180,24 @@
 				return h('label', { class: 'nse-range' }, [h('span', { class: 'nse-range-top' }, [h('span', { text: d.label }), out]), inp]);
 			});
 			qtyEl = h('p', { class: 'nse-qty' });
+			chipsEl = h('p', { class: 'nse-chips', hidden: true });
+			viewBtns = [];
+			var toggle = null;
+			if (has3d()) {
+				toggle = h('div', { class: 'nse-views', role: 'group', 'aria-label': 'Preview view' }, [['3d', '3D view'], ['plan', 'Top view']].map(function (v) {
+					var b = h('button', { type: 'button', class: 'nse-view', 'data-view': v[0], text: v[1], onclick: function () { view = v[0]; update(); } });
+					viewBtns.push(b);
+					return b;
+				}));
+			}
 			projBody.appendChild(h('section', { class: 'nse-sec', 'aria-labelledby': uid + '-m' }, [
 				stepTitle('Set the size', uid + '-m'),
-				h('div', { class: 'nse-box' }, [svg, h('div', { class: 'nse-sliders' }, sliders), qtyEl])
+				h('div', { class: 'nse-box' }, [
+					h('div', { class: 'nse-visual' }, [svg, toggle]),
+					chipsEl,
+					has3d() ? h('p', { class: 'nse-caption', text: 'Illustration for reference. Colors and details are finalized with you on site.' }) : null,
+					h('div', { class: 'nse-sliders' }, sliders), qtyEl
+				])
 			]));
 
 			/* Extras */
@@ -272,6 +289,28 @@
 			} })
 		]));
 
+		function drawVisual() {
+			var picked = addons.filter(function (a, i) { return state.addons[i]; });
+			if (has3d() && view === '3d') {
+				var o = opts[state.opt];
+				window.PEPreview.render(svg, {
+					scene: proj.preview,
+					variant: o && o.variant ? o.variant : '',
+					dims: state.dims.slice(),
+					max: dims.map(function (d) { return Number(d.max); }),
+					features: picked.map(function (a) { return a.feature || 'none'; })
+				});
+				svg.setAttribute('aria-label', 'Illustration of your ' + proj.name.toLowerCase() + (o ? ', ' + o.name : ''));
+			} else {
+				svg.setAttribute('viewBox', '0 0 400 220');
+				svg.setAttribute('aria-label', 'Top-down diagram of your project size');
+				drawPlan();
+			}
+			viewBtns.forEach(function (b) { b.setAttribute('aria-pressed', b.getAttribute('data-view') === view ? 'true' : 'false'); });
+			chipsEl.textContent = picked.length ? 'Includes: ' + picked.map(function (a) { return a.name; }).join(', ') : '';
+			chipsEl.hidden = !picked.length;
+		}
+
 		function fireConversion(result, payload) {
 			var low = Number(result.low) || 0, high = Number(result.high) || 0;
 			var value = { low: low, high: high, midpoint: Math.round((low + high) / 2), none: 0 }[track.value || 'midpoint'] || 0;
@@ -317,7 +356,7 @@
 			qtyEl.textContent = num(qty()) + ' ' + unit;
 			var e = estimate();
 			rangeEl.textContent = money(e.low) + ' to ' + money(e.high);
-			drawPlan();
+			drawVisual();
 		}
 
 		form.addEventListener('submit', function (ev) {

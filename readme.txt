@@ -2,7 +2,7 @@
 Contributors: novoslate
 Requires at least: 6.0
 Requires PHP: 7.4
-Stable tag: 1.2.0
+Stable tag: 1.3.0
 License: GPLv2 or later
 
 Instant price estimators with lead capture for contractors.
@@ -31,6 +31,13 @@ Leads are:
 * Spam protection: honeypot field, minimum fill time, and a per-visitor rate limit.
 * Use an SMTP plugin on the client site so lead emails actually get delivered.
 
+== Live preview ==
+Each project type shows a live 3D-style illustration that updates as visitors change the style, size, and extras. Visitors can switch to a top-down view.
+
+Scenes: patio cover, pergola, sunroom, patio enclosure, landscaping, artificial turf, pavers, and fence or wall. Set the scene per project type under "Live preview", then pick a "Preview look" for each choice and how each extra "Shows in preview as" (lights, canopy, fire pit, gates, and more). Extras that are not drawn are listed under the preview.
+
+Existing and custom estimators are matched to scenes, looks, and features automatically from their names. Choose "Top-down plan only" to turn the illustration off.
+
 == Conversion tracking ==
 Every quote request pushes an event to window.dataLayer for Google Tag Manager:
 
@@ -54,6 +61,10 @@ Suggested Google Ads tracking template:
 Disable capture with: add_filter( 'pe_capture_attribution', '__return_false' );
 
 == Changelog ==
+= 1.3.0 =
+* Live illustrated preview for 8 project scenes, with 3D and top views.
+* Preview looks per choice and visual features per extra, auto-detected from names.
+
 = 1.2.0 =
 * Project types: one estimator can offer several project types, each with its own pricing.
 * New templates: Outdoor living and Yard. Project library for adding types to any estimator.

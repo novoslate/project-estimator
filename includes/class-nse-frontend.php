@@ -17,7 +17,8 @@ class NSE_Frontend {
 
 	public static function register_assets() {
 		wp_register_style( 'nse-estimator', NSE_URL . 'assets/estimator.css', array(), NSE_VERSION );
-		wp_register_script( 'nse-estimator', NSE_URL . 'assets/estimator.js', array(), NSE_VERSION, true );
+		wp_register_script( 'pe-preview', NSE_URL . 'assets/preview.js', array(), NSE_VERSION, true );
+		wp_register_script( 'nse-estimator', NSE_URL . 'assets/estimator.js', array( 'pe-preview' ), NSE_VERSION, true );
 
 		/**
 		 * Attribution capture runs on every page so ad clicks are remembered

@@ -7,6 +7,7 @@
 
 	var T = NSE_ADMIN.templates;
 	var LIB = NSE_ADMIN.library || [];
+	var PV = NSE_ADMIN.preview || { scenes: { plan: { label: 'Top-down plan only', variants: [] } }, features: [['none', 'Not shown']] };
 	var clone = function (o) { return JSON.parse(JSON.stringify(o)); };
 	var cfg = NSE_ADMIN.config ? clone(NSE_ADMIN.config) : clone(NSE_ADMIN.defaults);
 	var ap = 0; // Active project tab.
@@ -31,7 +32,7 @@
 
 	function blankProject() {
 		return {
-			name: 'New project', note: '', pricing_model: 'area', unit_label: 'sq ft', min_job: 2500,
+			name: 'New project', note: '', pricing_model: 'area', unit_label: 'sq ft', min_job: 2500, preview: 'plan',
 			options_label: 'Choose a style', addons_label: 'Add extras',
 			dims: [{ label: 'Width (ft)', min: 5, max: 100, step: 1, default: 20 }, { label: 'Length (ft)', min: 5, max: 100, step: 1, default: 20 }],
 			options: [{ name: 'Option 1', note: '', low: 10, high: 20 }],
@@ -59,6 +60,15 @@
 			p.dims = p.dims.slice(0, need);
 			p.options = p.options || [];
 			p.addons = p.addons || [];
+			if (!PV.scenes[p.preview]) p.preview = 'plan';
+			var looks = PV.scenes[p.preview].variants.map(function (v) { return v[0]; });
+			p.options.forEach(function (o) {
+				if (looks.length && looks.indexOf(o.variant) === -1) o.variant = looks[0];
+			});
+			var feats = PV.features.map(function (f) { return f[0]; });
+			p.addons.forEach(function (a) {
+				if (feats.indexOf(a.feature) === -1) a.feature = 'none';
+			});
 		});
 		if (ap >= cfg.projects.length) ap = cfg.projects.length - 1;
 		if (ap < 0) ap = 0;
@@ -106,6 +116,11 @@
 				if (c.check) {
 					return '<td class="nse-c"><input type="checkbox" data-path="' + path + '" data-type="bool"' + (row[c.k] ? ' checked' : '') + '></td>';
 				}
+				if (c.choices) {
+					return '<td><select data-path="' + path + '" data-type="text">' + c.choices.map(function (ch) {
+						return '<option value="' + esc(ch[0]) + '"' + (ch[0] === row[c.k] ? ' selected' : '') + '>' + esc(ch[1]) + '</option>';
+					}).join('') + '</select></td>';
+				}
 				return '<td><input type="' + (c.num ? 'number' : 'text') + '" step="any" data-path="' + path + '" data-type="' + (c.num ? 'number' : 'text') + '" value="' + esc(row[c.k]) + '"></td>';
 			}).join('') +
 			(canRemove ? '<td><button type="button" class="button-link nse-del" data-action="remove-row" data-list="' + listPath + '" data-i="' + i + '">Remove</button></td>' : '') +
@@ -123,6 +138,7 @@
 		var p = cfg.projects[ap];
 		var unit = esc(p.unit_label || 'unit');
 		var many = cfg.projects.length > 1;
+		var looks = (PV.scenes[p.preview] || { variants: [] }).variants;
 
 		var tabs = '<div class="nse-tabs" role="tablist">' + cfg.projects.map(function (proj, i) {
 			return '<button type="button" role="tab" class="nse-tab' + (i === ap ? ' is-active' : '') + '" aria-selected="' + (i === ap) + '" data-action="tab" data-i="' + i + '">' + esc(proj.name || 'Untitled') + '</button>';
@@ -143,6 +159,7 @@
 			text('Project type name', base + '.name', { rerenderTabs: true }) +
 			text('Short description', base + '.note', { help: many ? 'Shown under the name on the project picker.' : 'Only shown when there are 2 or more project types.' }) +
 			select('Price by', base + '.pricing_model', [['area', 'Area (width x length)'], ['linear', 'Length only (fences, edging)']], true) +
+			select('Live preview', base + '.preview', Object.keys(PV.scenes).map(function (k) { return [k, PV.scenes[k].label]; }), true) +
 			text('Unit name', base + '.unit_label', { placeholder: 'sq ft' }) +
 			text('Minimum job ($)', base + '.min_job', { type: 'number', num: true, step: 'any' }) +
 			text('Choices heading', base + '.options_label') +
@@ -162,7 +179,7 @@
 				{ k: 'note', label: 'Short description' },
 				{ k: 'low', label: 'Low $ per ' + unit, num: true },
 				{ k: 'high', label: 'High $ per ' + unit, num: true }
-			], 'Add choice', true) +
+			].concat(looks.length ? [{ k: 'variant', label: 'Preview look', choices: looks }] : []), 'Add choice', true) +
 			'<h4>Extras</h4><p class="description">Flat price unless "Per ' + unit + '" is checked.</p>' +
 			rows(base + '.addons', [
 				{ k: 'name', label: 'Name' },
@@ -170,7 +187,7 @@
 				{ k: 'low', label: 'Low $', num: true },
 				{ k: 'high', label: 'High $', num: true },
 				{ k: 'per_unit', label: 'Per ' + unit, check: true }
-			], 'Add extra', true) +
+			].concat(p.preview !== 'plan' ? [{ k: 'feature', label: 'Shows in preview as', choices: PV.features }] : []), 'Add extra', true) +
 			'</div>' + adder;
 	}
 
@@ -296,8 +313,8 @@
 		} else if (a === 'add-row') {
 			var list = get(b.dataset.list);
 			list.push(/\.addons$/.test(b.dataset.list)
-				? { name: '', note: '', low: 0, high: 0, per_unit: false }
-				: { name: '', note: '', low: 0, high: 0 });
+				? { name: '', note: '', low: 0, high: 0, per_unit: false, feature: 'none' }
+				: { name: '', note: '', low: 0, high: 0, variant: '' });
 		} else if (a === 'remove-row') {
 			get(b.dataset.list).splice(parseInt(b.dataset.i, 10), 1);
 		}

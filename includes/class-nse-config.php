@@ -167,6 +167,10 @@ class NSE_Config {
 		$out['options_label'] = self::text( $p, 'options_label', 'Choose a style' );
 		$out['addons_label']  = self::text( $p, 'addons_label', 'Add extras' );
 
+		// Live preview scene. Guessed from the name when not set.
+		$scene          = isset( $p['preview'] ) ? sanitize_key( $p['preview'] ) : '';
+		$out['preview'] = NSE_Preview::valid_scene( $scene ) ? $scene : NSE_Preview::guess_scene( $out['name'], $out['pricing_model'] );
+
 		// Measurements.
 		$need = 'area' === $out['pricing_model'] ? 2 : 1;
 		$dims = array();
@@ -201,11 +205,14 @@ class NSE_Config {
 				continue;
 			}
 			$low              = self::num( isset( $o['low'] ) ? $o['low'] : 0 );
+			$name             = self::text( $o, 'name' );
+			$variant          = isset( $o['variant'] ) ? sanitize_key( $o['variant'] ) : '';
 			$out['options'][] = array(
-				'name' => self::text( $o, 'name' ),
-				'note' => self::text( $o, 'note' ),
-				'low'  => $low,
-				'high' => max( $low, self::num( isset( $o['high'] ) ? $o['high'] : $low ) ),
+				'name'    => $name,
+				'note'    => self::text( $o, 'note' ),
+				'low'     => $low,
+				'high'    => max( $low, self::num( isset( $o['high'] ) ? $o['high'] : $low ) ),
+				'variant' => NSE_Preview::valid_variant( $out['preview'], $variant ) ? $variant : NSE_Preview::guess_variant( $out['preview'], $name ),
 			);
 		}
 
@@ -216,12 +223,15 @@ class NSE_Config {
 				continue;
 			}
 			$low             = self::num( isset( $a['low'] ) ? $a['low'] : 0 );
+			$name            = self::text( $a, 'name' );
+			$feature         = isset( $a['feature'] ) ? sanitize_key( $a['feature'] ) : '';
 			$out['addons'][] = array(
-				'name'     => self::text( $a, 'name' ),
+				'name'     => $name,
 				'note'     => self::text( $a, 'note' ),
 				'low'      => $low,
 				'high'     => max( $low, self::num( isset( $a['high'] ) ? $a['high'] : $low ) ),
 				'per_unit' => ! empty( $a['per_unit'] ),
+				'feature'  => NSE_Preview::valid_feature( $feature ) ? $feature : NSE_Preview::guess_feature( $name ),
 			);
 		}
 

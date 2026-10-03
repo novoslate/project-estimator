@@ -110,7 +110,7 @@ class NSE_Admin {
 		foreach ( NSE_Templates::all() as $slug => $t ) {
 			$templates[ $slug ] = array(
 				'label'  => $t['label'],
-				'config' => $t['config'],
+				'config' => NSE_Config::sanitize( $t['config'] ),
 			);
 		}
 
@@ -121,7 +121,8 @@ class NSE_Admin {
 			'NSE_ADMIN',
 			array(
 				'templates'  => $templates,
-				'library'    => NSE_Templates::library(),
+				'library'    => array_map( array( 'NSE_Config', 'sanitize_project' ), NSE_Templates::library() ),
+				'preview'    => NSE_Preview::admin_catalog(),
 				'config'     => $saved,
 				'defaults'   => NSE_Config::defaults(),
 				'adminEmail' => get_option( 'admin_email' ),
