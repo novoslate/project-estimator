@@ -18,6 +18,15 @@ class NSE_Frontend {
 	public static function register_assets() {
 		wp_register_style( 'nse-estimator', NSE_URL . 'assets/estimator.css', array(), NSE_VERSION );
 		wp_register_script( 'nse-estimator', NSE_URL . 'assets/estimator.js', array(), NSE_VERSION, true );
+
+		/**
+		 * Attribution capture runs on every page so ad clicks are remembered
+		 * even when visitors land on one page and request a quote on another.
+		 * Disable with: add_filter( 'pe_capture_attribution', '__return_false' );
+		 */
+		if ( apply_filters( 'pe_capture_attribution', true ) ) {
+			wp_enqueue_script( 'pe-attribution', NSE_URL . 'assets/attribution.js', array(), NSE_VERSION, false );
+		}
 	}
 
 	public static function shortcode( $atts ) {
@@ -38,8 +47,9 @@ class NSE_Frontend {
 		$config = NSE_Config::public_config( NSE_Config::get( $id ) );
 
 		return sprintf(
-			'<div class="nse" data-id="%d" data-ts="%d" data-endpoint="%s" data-config="%s"><noscript>Turn on JavaScript to use the price estimator.</noscript></div>',
+			'<div class="nse" data-id="%d" data-name="%s" data-ts="%d" data-endpoint="%s" data-config="%s"><noscript>Turn on JavaScript to use the price estimator.</noscript></div>',
 			$id,
+			esc_attr( get_the_title( $post ) ),
 			time(),
 			esc_url( rest_url( 'nse/v1/lead' ) ),
 			esc_attr( wp_json_encode( $config ) )

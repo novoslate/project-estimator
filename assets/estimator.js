@@ -27,6 +27,21 @@
 	function money(n) { return '$' + Math.round(n).toLocaleString('en-US'); }
 	function num(n) { return (Math.round(n * 10) / 10).toLocaleString('en-US'); }
 
+	/* Tracking helpers */
+	function push(obj) {
+		window.dataLayer = window.dataLayer || [];
+		window.dataLayer.push(obj);
+	}
+	function e164(phone) {
+		var d = String(phone || '').replace(/\D/g, '');
+		if (d.length === 10) return '+1' + d;
+		if (d.length === 11 && d.charAt(0) === '1') return '+' + d;
+		return d ? '+' + d : '';
+	}
+	function attribution() {
+		try { return typeof window.peAttribution === 'function' ? window.peAttribution() : {}; } catch (e) { return {}; }
+	}
+
 	function init(root) {
 		var cfg;
 		try { cfg = JSON.parse(root.getAttribute('data-config')); } catch (e) { return; }
@@ -39,6 +54,18 @@
 		var linear = cfg.pricing_model === 'linear';
 		var state = { opt: 0, dims: dims.map(function (d) { return Number(d.default); }), addons: {} };
 		if (biz.accent) root.style.setProperty('--nse-accent', biz.accent);
+
+		var track = cfg.tracking || {};
+		var estId = Number(root.getAttribute('data-id'));
+		var estName = root.getAttribute('data-name') || '';
+		var started = false;
+		function markStarted() {
+			if (started) return;
+			started = true;
+			push({ event: 'project_estimator_start', estimator_id: estId, estimator_name: estName });
+		}
+		root.addEventListener('click', markStarted, { once: true });
+		root.addEventListener('input', markStarted, { once: true });
 
 		/* Same math as NSE_Config::estimate() in PHP */
 		function qty() { return linear ? state.dims[0] : state.dims[0] * (state.dims[1] || 0); }
@@ -191,6 +218,43 @@
 			} })
 		]));
 
+		function fireConversion(result, payload) {
+			var low = Number(result.low) || 0, high = Number(result.high) || 0;
+			var value = { low: low, high: high, midpoint: Math.round((low + high) / 2), none: 0 }[track.value || 'midpoint'] || 0;
+			var leadId = result.lead_id ? String(result.lead_id) : '';
+			var opt = opts[state.opt];
+			var userData = null;
+			if (track.enhanced) {
+				userData = {};
+				if (payload.email) userData.email = payload.email.toLowerCase();
+				if (payload.phone) userData.phone_number = e164(payload.phone);
+			}
+
+			var evt = {
+				event: track.event_name || 'project_estimator_lead',
+				estimator_id: estId,
+				estimator_name: estName,
+				lead_id: leadId,
+				project_option: opt ? opt.name : '',
+				estimate_low: low,
+				estimate_high: high,
+				value: value,
+				currency: 'USD'
+			};
+			if (userData) evt.user_data = userData;
+			push(evt);
+
+			if (typeof window.gtag === 'function') {
+				if (userData) window.gtag('set', 'user_data', userData);
+				if (track.ga4) {
+					window.gtag('event', 'generate_lead', { value: value, currency: 'USD', lead_id: leadId, estimator_name: estName });
+				}
+				if (track.ads_send_to) {
+					window.gtag('event', 'conversion', { send_to: track.ads_send_to, value: value, currency: 'USD', transaction_id: leadId });
+				}
+			}
+		}
+
 		function update() {
 			optBtns.forEach(function (b, i) { b.setAttribute('aria-pressed', i === state.opt ? 'true' : 'false'); });
 			outs.forEach(function (o, i) { o.textContent = num(state.dims[i]) + ' ft'; });
@@ -225,7 +289,8 @@
 				option: state.opt,
 				dims: state.dims,
 				addons: Object.keys(state.addons).filter(function (i) { return state.addons[i]; }).map(Number),
-				page: window.location.href
+				page: window.location.href,
+				attribution: attribution()
 			};
 			fetch(root.getAttribute('data-endpoint'), {
 				method: 'POST',
@@ -248,6 +313,7 @@
 					done.appendChild(list);
 					done.hidden = false;
 					done.focus();
+					fireConversion(res.j, payload);
 				})
 				.catch(function (x) {
 					fail(x.message || ('Your request did not go through. Please try again' + (biz.phone ? ' or call ' + biz.phone : '') + '.'));

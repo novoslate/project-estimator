@@ -20,7 +20,18 @@ class NSE_Config {
 			'webhook_url'  => '',
 			'accent'       => '#1E3A3F',
 		);
+		$c['tracking'] = self::tracking_defaults();
 		return $c;
+	}
+
+	public static function tracking_defaults() {
+		return array(
+			'event_name'   => 'project_estimator_lead',
+			'value'        => 'midpoint',
+			'ads_send_to'  => '',
+			'ga4'          => true,
+			'enhanced'     => false,
+		);
 	}
 
 	/**
@@ -137,6 +148,20 @@ class NSE_Config {
 				'per_unit' => ! empty( $a['per_unit'] ),
 			);
 		}
+
+		// Conversion tracking.
+		$t               = ( isset( $c['tracking'] ) && is_array( $c['tracking'] ) ) ? $c['tracking'] : self::tracking_defaults();
+		$td              = self::tracking_defaults();
+		$event           = isset( $t['event_name'] ) ? preg_replace( '/[^A-Za-z0-9_]/', '', (string) $t['event_name'] ) : '';
+		$send_to         = isset( $t['ads_send_to'] ) ? trim( (string) $t['ads_send_to'] ) : '';
+		$value           = isset( $t['value'] ) ? $t['value'] : $td['value'];
+		$out['tracking'] = array(
+			'event_name'  => $event ? substr( $event, 0, 40 ) : $td['event_name'],
+			'value'       => in_array( $value, array( 'none', 'low', 'midpoint', 'high' ), true ) ? $value : 'midpoint',
+			'ads_send_to' => preg_match( '/^AW-\d+\/[A-Za-z0-9_-]+$/', $send_to ) ? $send_to : '',
+			'ga4'         => isset( $t['ga4'] ) ? (bool) $t['ga4'] : $td['ga4'],
+			'enhanced'    => ! empty( $t['enhanced'] ),
+		);
 
 		// Form fields. Name and phone are always required.
 		$f             = ( isset( $c['fields'] ) && is_array( $c['fields'] ) ) ? $c['fields'] : array();

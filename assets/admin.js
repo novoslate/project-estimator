@@ -38,6 +38,7 @@
 		cfg.addons = cfg.addons || [];
 		cfg.fields = cfg.fields || {};
 		cfg.timeline_choices = cfg.timeline_choices || [];
+		cfg.tracking = cfg.tracking || JSON.parse(JSON.stringify(NSE_ADMIN.defaults.tracking));
 	}
 
 	/* Field builders */
@@ -63,6 +64,10 @@
 			choices.map(function (c) {
 				return '<option value="' + esc(c[0]) + '"' + (c[0] === v ? ' selected' : '') + '>' + esc(c[1]) + '</option>';
 			}).join('') + '</select></label>';
+	}
+	function check(label, path, help) {
+		return '<label class="nse-check nse-wide"><input type="checkbox" data-path="' + path + '" data-type="bool"' + (get(path) ? ' checked' : '') + '> ' +
+			'<span><strong>' + label + '</strong>' + (help ? '<em>' + help + '</em>' : '') + '</span></label>';
 	}
 	function rows(key, cols, addLabel, canRemove) {
 		var list = cfg[key] || [];
@@ -96,7 +101,7 @@
 		root.innerHTML =
 			card('Start from a template',
 				'<div class="nse-row"><select id="nse-tpl">' + tplOptions + '</select> <button type="button" class="button" data-action="load">Load template</button></div>',
-				'Loading a template replaces the page text, pricing, measurements, and extras. Business details are kept.') +
+				'Loading a template replaces the page text, pricing, measurements, and extras. Business and tracking settings are kept.') +
 
 			card('Business',
 				'<div class="nse-grid">' +
@@ -162,7 +167,17 @@
 				select('Project details', 'fields.notes', fieldChoices) +
 				area('Timeline choices', 'timeline_choices', { lines: true, rows: 4, help: 'One per line.' }) +
 				'</div>',
-				'Name and phone are always required.');
+				'Name and phone are always required.') +
+
+			card('Conversion tracking',
+				'<div class="nse-grid">' +
+				text('dataLayer event name', 'tracking.event_name', { placeholder: 'project_estimator_lead' }) +
+				select('Conversion value', 'tracking.value', [['midpoint', 'Middle of estimate'], ['low', 'Low end of estimate'], ['high', 'High end of estimate'], ['none', 'No value']]) +
+				text('Google Ads conversion (send_to)', 'tracking.ads_send_to', { placeholder: 'AW-123456789/AbCdEfGhIjK' }) +
+				check('Send GA4 generate_lead event', 'tracking.ga4', 'Fires through gtag.js if it is on the page. Skip this if GA4 is handled in GTM.') +
+				check('Enhanced conversions', 'tracking.enhanced', 'Adds the lead\'s email and phone to the conversion so Google can match it. Mention this in the site privacy policy.') +
+				'</div>',
+				'On every quote request the plugin pushes the event above to the dataLayer for GTM. Fill in send_to only if the site uses gtag.js directly instead of GTM. Ad click IDs and UTM tags are saved with every lead automatically.');
 
 		sync();
 	}
@@ -191,9 +206,10 @@
 			var key = document.getElementById('nse-tpl').value;
 			if (!T[key]) return;
 			if (!window.confirm('Replace the current pricing and text with the "' + T[key].label + '" template?')) return;
-			var business = cfg.business;
+			var business = cfg.business, tracking = cfg.tracking;
 			cfg = clone(T[key].config);
 			cfg.business = business;
+			cfg.tracking = tracking;
 			cfg.template = key;
 		} else if (a === 'add') {
 			var k = b.dataset.key;

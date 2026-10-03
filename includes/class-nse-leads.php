@@ -11,6 +11,57 @@ class NSE_Leads {
 
 	const META_KEY = '_nse_lead';
 
+	const ATTR_KEYS = array(
+		'gclid', 'gbraid', 'wbraid', 'msclkid', 'fbclid',
+		'utm_source', 'utm_medium', 'utm_campaign', 'utm_term', 'utm_content', 'utm_id',
+		'campaignid', 'adgroupid', 'keyword', 'matchtype', 'device',
+		'landing_page', 'referrer', 'captured_at',
+	);
+
+	/**
+	 * Keep only known attribution keys with short, clean values.
+	 */
+	public static function sanitize_attribution( $raw ) {
+		$out = array();
+		if ( ! is_array( $raw ) ) {
+			return $out;
+		}
+		foreach ( self::ATTR_KEYS as $k ) {
+			if ( ! isset( $raw[ $k ] ) || ! is_scalar( $raw[ $k ] ) || '' === (string) $raw[ $k ] ) {
+				continue;
+			}
+			$v         = in_array( $k, array( 'landing_page', 'referrer' ), true ) ? esc_url_raw( (string) $raw[ $k ] ) : sanitize_text_field( (string) $raw[ $k ] );
+			$out[ $k ] = substr( $v, 0, 300 );
+		}
+		return $out;
+	}
+
+	/**
+	 * Short human label for where a lead came from.
+	 */
+	public static function source_label( $a ) {
+		$a = is_array( $a ) ? $a : array();
+		if ( ! empty( $a['gclid'] ) || ! empty( $a['gbraid'] ) || ! empty( $a['wbraid'] ) ) {
+			$label = 'Google Ads';
+		} elseif ( ! empty( $a['msclkid'] ) ) {
+			$label = 'Microsoft Ads';
+		} elseif ( ! empty( $a['fbclid'] ) ) {
+			$label = 'Facebook';
+		} elseif ( ! empty( $a['utm_source'] ) ) {
+			$label = $a['utm_source'] . ( ! empty( $a['utm_medium'] ) ? ' / ' . $a['utm_medium'] : '' );
+		} elseif ( ! empty( $a['referrer'] ) ) {
+			$host  = wp_parse_url( $a['referrer'], PHP_URL_HOST );
+			$host  = $host ? preg_replace( '/^www\./', '', $host ) : 'Referral';
+			$label = preg_match( '/(^|\.)(google|bing|yahoo|duckduckgo)\./', $host ) ? 'Organic search (' . $host . ')' : $host;
+		} else {
+			return 'Direct';
+		}
+		if ( ! empty( $a['utm_campaign'] ) ) {
+			$label .= ': ' . $a['utm_campaign'];
+		}
+		return $label;
+	}
+
 	public static function init() {
 		add_action( 'rest_api_init', array( __CLASS__, 'routes' ) );
 		add_action( 'add_meta_boxes_nse_lead', array( __CLASS__, 'meta_boxes' ) );
@@ -143,6 +194,13 @@ class NSE_Leads {
 			'page'          => isset( $p['page'] ) ? esc_url_raw( (string) $p['page'] ) : '',
 			'submitted'     => current_time( 'mysql' ),
 		);
+		$attr = self::sanitize_attribution( isset( $p['attribution'] ) ? $p['attribution'] : null );
+		if ( ! $attr && isset( $_COOKIE['pe_attr'] ) ) {
+			// Fallback if the page script could not read the cookie.
+			$attr = self::sanitize_attribution( json_decode( wp_unslash( $_COOKIE['pe_attr'] ), true ) ); // phpcs:ignore WordPress.Security.ValidatedSanitizedInput.InputNotSanitized
+		}
+		$lead['source']      = self::source_label( $attr );
+		$lead['attribution'] = $attr;
 
 		$lead_id = wp_insert_post(
 			array(
@@ -157,14 +215,19 @@ class NSE_Leads {
 		}
 		update_post_meta( $lead_id, self::META_KEY, $lead );
 		update_post_meta( $lead_id, '_nse_estimator_id', $id );
+		if ( ! empty( $attr['gclid'] ) ) {
+			update_post_meta( $lead_id, '_pe_gclid', $attr['gclid'] );
+		}
+		$lead['lead_id'] = $lead_id;
 
 		self::notify( $c, $lead );
 
 		return rest_ensure_response(
 			array(
-				'ok'   => true,
-				'low'  => $est['low'],
-				'high' => $est['high'],
+				'ok'      => true,
+				'lead_id' => $lead_id,
+				'low'     => $est['low'],
+				'high'    => $est['high'],
 			)
 		);
 	}
@@ -203,6 +266,11 @@ class NSE_Leads {
 		if ( $lead['page'] ) {
 			$lines[] = 'Page: ' . $lead['page'];
 		}
+		$lines[] = '';
+		$lines[] = 'Source: ' . $lead['source'];
+		foreach ( self::attribution_rows( $lead['attribution'] ) as $label => $val ) {
+			$lines[] = $label . ': ' . $val;
+		}
 
 		$headers = array();
 		if ( $lead['email'] ) {
@@ -221,6 +289,39 @@ class NSE_Leads {
 				)
 			);
 		}
+	}
+
+	/**
+	 * Labeled attribution fields for display.
+	 */
+	public static function attribution_rows( $a ) {
+		$labels = array(
+			'utm_campaign' => 'Campaign',
+			'utm_term'     => 'Keyword (utm_term)',
+			'keyword'      => 'Keyword',
+			'matchtype'    => 'Match type',
+			'utm_source'   => 'UTM source',
+			'utm_medium'   => 'UTM medium',
+			'utm_content'  => 'UTM content',
+			'campaignid'   => 'Campaign ID',
+			'adgroupid'    => 'Ad group ID',
+			'device'       => 'Device',
+			'gclid'        => 'GCLID',
+			'gbraid'       => 'GBRAID',
+			'wbraid'       => 'WBRAID',
+			'msclkid'      => 'MSCLKID',
+			'fbclid'       => 'FBCLID',
+			'landing_page' => 'Landing page',
+			'referrer'     => 'Referrer',
+			'captured_at'  => 'Source captured',
+		);
+		$rows = array();
+		foreach ( $labels as $k => $label ) {
+			if ( ! empty( $a[ $k ] ) ) {
+				$rows[ $label ] = $a[ $k ];
+			}
+		}
+		return $rows;
 	}
 
 	public static function meta_boxes() {
@@ -248,7 +349,9 @@ class NSE_Leads {
 			'Estimate shown' => self::money( $lead['estimate_low'] ) . ' to ' . self::money( $lead['estimate_high'] ),
 			'Page'           => $lead['page'],
 			'Submitted'      => $lead['submitted'],
+			'Source'         => isset( $lead['source'] ) ? $lead['source'] : '',
 		);
+		$rows += self::attribution_rows( isset( $lead['attribution'] ) ? $lead['attribution'] : array() );
 		echo '<table class="widefat striped"><tbody>';
 		foreach ( $rows as $label => $val ) {
 			if ( '' === (string) $val ) {
@@ -266,6 +369,7 @@ class NSE_Leads {
 			'nse_phone'    => 'Phone',
 			'nse_choice'   => 'Choice',
 			'nse_estimate' => 'Estimate',
+			'nse_source'   => 'Source',
 			'date'         => 'Date',
 		);
 	}
@@ -279,6 +383,8 @@ class NSE_Leads {
 			printf( '<a href="tel:%s">%s</a>', esc_attr( preg_replace( '/[^\d+]/', '', $lead['phone'] ) ), esc_html( $lead['phone'] ) );
 		} elseif ( 'nse_choice' === $col ) {
 			echo esc_html( $lead['option'] . ', ' . $lead['quantity'] );
+		} elseif ( 'nse_source' === $col ) {
+			echo esc_html( isset( $lead['source'] ) ? $lead['source'] : 'Unknown' );
 		} elseif ( 'nse_estimate' === $col ) {
 			echo esc_html( self::money( $lead['estimate_low'] ) . ' to ' . self::money( $lead['estimate_high'] ) );
 		}

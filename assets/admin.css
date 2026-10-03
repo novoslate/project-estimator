@@ -21,3 +21,6 @@
 	#nse-editor .nse-table tr { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; padding: 8px 0; border-bottom: 1px solid #f0f0f1; }
 	#nse-editor .nse-table input[type=number] { max-width: none; }
 }
+#nse-editor .nse-check { display: flex; gap: 8px; align-items: flex-start; }
+#nse-editor .nse-check input { margin-top: 2px; }
+#nse-editor .nse-check em { display: block; font-size: 12px; color: #646970; font-style: normal; }
