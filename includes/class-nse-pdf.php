@@ -394,6 +394,22 @@ class NSE_Pdf {
 			$pdf->SetFont( 'Helvetica', '', 10 );
 			$pdf->SetTextColor( $ink[0], $ink[1], $ink[2] );
 			$pdf->MultiCell( $W, 5, self::t( $c['success_message'] ), 0, 'L' );
+			$booking = NSE_Settings::booking_url( $c );
+			if ( $booking ) {
+				$link = NSE_Settings::booking_prefill( $booking, $lead['name'], isset( $lead['email'] ) ? $lead['email'] : '' );
+				$pdf->Ln( 1.5 );
+				$pdf->SetFont( 'Helvetica', 'B', 10 );
+				$pdf->SetTextColor( $accent[0], $accent[1], $accent[2] );
+				if ( array_sum( $accent ) > 600 ) {
+					$pdf->SetTextColor( $ink[0], $ink[1], $ink[2] );
+				}
+				$pdf->Write( 5, self::t( 'Book your free on-site visit' ), $link );
+				$pdf->SetFont( 'Helvetica', '', 9 );
+				$pdf->SetTextColor( $muted[0], $muted[1], $muted[2] );
+				$host = preg_replace( '/^www\./', '', (string) wp_parse_url( $booking, PHP_URL_HOST ) );
+				$pdf->Write( 5, self::t( '   ' . $host ), $link );
+				$pdf->Ln( 5 );
+			}
 			$pdf->Ln( 4 );
 		}
 		if ( ! empty( $c['disclaimer'] ) ) {

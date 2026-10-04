@@ -165,6 +165,7 @@ class NSE_Dashboard {
 			array( 'Started', self::n( $s['starts'] ), self::delta( $s['starts'], $p['starts'] ), $s['views'] ? self::pct( $s['starts'], $s['views'], 0 ) . ' of views' : 'Picked a style or size' ),
 			array( 'Quote requests', self::n( $s['requests'] ), self::delta( $s['requests'], $p['requests'] ), $s['views'] ? self::pct( $s['requests'], $s['views'] ) . ' of views' : '' ),
 			array( 'Conversion rate', null === $conv ? 'n/a' : esc_html( self::pct( $s['requests'], $s['views'] ) ), self::delta( $conv, $pconv, true ), 'Views to quote requests' ),
+			array( 'Clicked to book', self::n( $s['booking_clicks'] ), self::delta( $s['booking_clicks'], $p['booking_clicks'] ), $s['requests'] ? self::pct( $s['booking_clicks'], $s['requests'], 0 ) . ' of quote requests' : 'Opened the booking link' ),
 			array( 'Booked', self::n( $s['booked'] ), self::delta( $s['booked'], $p['booked'] ), null === $close ? '' : self::pct( $s['booked'], $s['requests'], 0 ) . ' close rate' ),
 			array( 'Pipeline value', self::money( $s['pipeline'] ), self::delta( $s['pipeline'], $p['pipeline'] ), 'Sum of estimate midpoints' ),
 			array( 'Booked value', self::money( $s['booked_value'] ), self::delta( $s['booked_value'], $p['booked_value'] ), 'From booked job values' ),
@@ -272,6 +273,9 @@ class NSE_Dashboard {
 		$lines[] = '';
 		$lines[] = sprintf( '%s estimator views, %s started (%s)', self::n( $s['views'] ), self::n( $s['starts'] ), self::pct( $s['starts'], $s['views'], 0 ) ?: 'n/a' );
 		$lines[] = sprintf( '%s quote requests%s', self::n( $s['requests'] ), $s['views'] ? ' (' . self::pct( $s['requests'], $s['views'] ) . ' of views)' : '' ) . self::text_delta( $s['requests'], $p['requests'] );
+		if ( $s['booking_clicks'] ) {
+			$lines[] = sprintf( '%s clicked to book an on-site visit (%s of requests)', self::n( $s['booking_clicks'] ), self::pct( $s['booking_clicks'], $s['requests'], 0 ) );
+		}
 		$lines[] = sprintf( '%s booked%s%s', self::n( $s['booked'] ), $s['requests'] ? ' (' . self::pct( $s['booked'], $s['requests'], 0 ) . ' close rate)' : '', $s['booked_value'] ? ', ' . self::money( $s['booked_value'] ) . ' in booked jobs' : '' );
 		$lines[] = sprintf( '%s in estimated pipeline, average estimate %s', self::money( $s['pipeline'] ), self::money( $s['avg'] ) );
 		if ( $s['sources'] ) {

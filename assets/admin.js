@@ -80,6 +80,11 @@
 		cfg.timeline_choices = cfg.timeline_choices || [];
 		cfg.tracking = cfg.tracking || clone(NSE_ADMIN.defaults.tracking);
 		if (cfg.project_label === undefined) cfg.project_label = 'What are you planning?';
+		if (['range', 'starting', 'gated'].indexOf(cfg.price_display) === -1) cfg.price_display = 'range';
+		cfg.booking = cfg.booking && typeof cfg.booking === 'object' ? cfg.booking : {};
+		if (cfg.booking.url === undefined) cfg.booking.url = '';
+		if (!cfg.booking.label) cfg.booking.label = 'Book your free on-site visit';
+		cfg.booking.embed = !!cfg.booking.embed;
 		cfg.business = cfg.business || {};
 		['cc', 'bcc', 'notify_email'].forEach(function (k) { if (cfg.business[k] === undefined) cfg.business[k] = ''; });
 		delete cfg.business.accent;
@@ -269,6 +274,14 @@
 				'</div>',
 				'Leads are saved under Estimators > Leads, emailed to the addresses above, and posted to the webhook if set. Separate multiple emails with commas. Defaults live in <a href="' + esc(NSE_ADMIN.settingsUrl) + '">Estimators > Settings</a>.') +
 
+			card('After the quote',
+				'<div class="nse-grid">' +
+				text('Booking link', 'booking.url', { type: 'url', wide: true, placeholder: (G.booking_url || 'https://calendly.com/your-company/on-site-visit'), help: G.booking_url ? 'Blank uses the site-wide link from Settings.' : 'Calendly, a Google Calendar booking page, Cal.com, Acuity, and others. You can also set one site-wide link in Settings.' }) +
+				text('Button text', 'booking.label', { placeholder: 'Book your free on-site visit' }) +
+				check('Show the booking page on the confirmation screen', 'booking.embed', 'Customers pick a time without leaving the page. Some booking tools do not allow this; the button always works.') +
+				'</div>',
+				'Shown right after a quote request, in the customer email, and in the PDF. Calendly and Cal.com links get the customer\'s name and email filled in.') +
+
 			designCard() +
 
 			card('Page text',
@@ -278,6 +291,7 @@
 				text('Project type question', 'project_label', { help: 'Shown when there are 2 or more project types.' }) +
 				text('Button text', 'cta_text') +
 				text('Round prices to ($)', 'round_to', { type: 'number', num: true }) +
+				select('Price display', 'price_display', [['range', 'Show the price range as they go'], ['starting', 'Show "Starting at" only, full range after the request'], ['gated', 'Hide the price until they request a quote']]) +
 				area('Message after submitting', 'success_message') +
 				area('Fine print', 'disclaimer') +
 				'</div>') +

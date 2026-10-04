@@ -56,6 +56,7 @@ class NSE_Settings {
 			'logo_id'      => 0,
 			'website'      => '',
 			'reply_to'     => '',
+			'booking_url'  => '',
 			'webhook_alert' => '',
 			'nutshell'     => NSE_Nutshell::defaults(),
 			'recaptcha'    => NSE_Recaptcha::defaults(),
@@ -136,6 +137,37 @@ class NSE_Settings {
 		return $host ? $host : '';
 	}
 
+	/**
+	 * Booking page URL (https only).
+	 */
+	public static function sanitize_booking_url( $raw ) {
+		$u = esc_url_raw( trim( (string) $raw ), array( 'https' ) );
+		return ( $u && wp_parse_url( $u, PHP_URL_HOST ) ) ? substr( $u, 0, 500 ) : '';
+	}
+
+	/**
+	 * The booking link for an estimator: its own, or the site-wide default.
+	 */
+	public static function booking_url( array $c ) {
+		if ( ! empty( $c['booking']['url'] ) ) {
+			return $c['booking']['url'];
+		}
+		$s = self::get();
+		return $s['booking_url'];
+	}
+
+	/**
+	 * Add the customer's name and email for booking tools that support it (Calendly, Cal.com).
+	 */
+	public static function booking_prefill( $url, $name, $email ) {
+		$host = strtolower( (string) wp_parse_url( $url, PHP_URL_HOST ) );
+		if ( ! preg_match( '/(^|\.)(calendly\.com|cal\.com)$/', $host ) ) {
+			return $url;
+		}
+		$args = array_filter( array( 'name' => $name, 'email' => $email ) );
+		return $args ? add_query_arg( array_map( 'rawurlencode', $args ), $url ) : $url;
+	}
+
 	public static function sanitize_design( $d ) {
 		$d   = is_array( $d ) ? $d : array();
 		$def = self::design_defaults();
@@ -178,6 +210,7 @@ class NSE_Settings {
 			'logo_id'      => isset( $in['logo_id'] ) ? absint( $in['logo_id'] ) : 0,
 			'website'      => isset( $in['website'] ) ? self::sanitize_website( $in['website'] ) : '',
 			'reply_to'     => isset( $in['reply_to'] ) && is_email( sanitize_email( $in['reply_to'] ) ) ? sanitize_email( $in['reply_to'] ) : '',
+			'booking_url'  => isset( $in['booking_url'] ) ? self::sanitize_booking_url( $in['booking_url'] ) : '',
 			'webhook_alert' => isset( $in['webhook_alert'] ) ? self::sanitize_emails( $in['webhook_alert'] ) : '',
 			'nutshell'     => NSE_Nutshell::sanitize( isset( $in['nutshell'] ) ? $in['nutshell'] : array() ),
 			'recaptcha'    => NSE_Recaptcha::sanitize( isset( $in['recaptcha'] ) ? $in['recaptcha'] : array() ),
@@ -433,6 +466,12 @@ class NSE_Settings {
 			);
 		}
 		echo '</fieldset></td></tr>';
+		printf(
+			'<tr><th scope="row"><label for="pe-booking">Booking link</label></th><td><input type="url" class="large-text" id="pe-booking" name="%s" value="%s" placeholder="https://calendly.com/your-company/on-site-visit"><p class="description">%s</p></td></tr>',
+			self::name( 'booking_url' ), // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- escaped in name().
+			esc_attr( $s['booking_url'] ),
+			esc_html( 'Where customers book their on-site visit (Calendly, a Google Calendar booking page, Cal.com, Acuity, and others). Shown after the quote request, in the customer email, and in the PDF. Each estimator can use its own link instead.' )
+		);
 		printf(
 			'<tr><th scope="row"><label for="pe-reply-to">Reply-to address</label></th><td><input type="email" class="regular-text" id="pe-reply-to" name="%s" value="%s" placeholder="%s"><p class="description">Where replies go when a customer answers their estimate email. Leave blank to use the first "Send leads to" address.</p></td></tr>',
 			self::name( 'reply_to' ), // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- escaped in name().

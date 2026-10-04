@@ -79,6 +79,38 @@ class NSE_Leads {
 				'permission_callback' => '__return_true',
 			)
 		);
+		register_rest_route(
+			'nse/v1',
+			'/booking-click',
+			array(
+				'methods'             => 'POST',
+				'callback'            => array( __CLASS__, 'booking_click' ),
+				'permission_callback' => '__return_true',
+			)
+		);
+	}
+
+	/**
+	 * Signed key so only the visitor who submitted a lead can record its booking click.
+	 */
+	public static function booking_key( $lead_id ) {
+		return substr( hash_hmac( 'sha256', 'pe-booking|' . (int) $lead_id, wp_salt( 'auth' ) ), 0, 24 );
+	}
+
+	/**
+	 * Record that the customer clicked the booking link (first click only).
+	 */
+	public static function booking_click( WP_REST_Request $req ) {
+		$p  = $req->get_json_params();
+		$id = is_array( $p ) && isset( $p['lead_id'] ) ? absint( $p['lead_id'] ) : 0;
+		$k  = is_array( $p ) && isset( $p['key'] ) ? (string) $p['key'] : '';
+		if ( ! $id || 'nse_lead' !== get_post_type( $id ) || ! hash_equals( self::booking_key( $id ), $k ) ) {
+			return new WP_REST_Response( array( 'ok' => false ), 403 );
+		}
+		if ( ! get_post_meta( $id, '_pe_booking_click', true ) ) {
+			update_post_meta( $id, '_pe_booking_click', time() );
+		}
+		return new WP_REST_Response( array( 'ok' => true ), 200 );
 	}
 
 	private static function fail( $msg, $status = 400 ) {
@@ -296,6 +328,7 @@ class NSE_Leads {
 				'lead_id' => $lead_id,
 				'photos'  => isset( $lead['photos'] ) ? count( $lead['photos'] ) : 0,
 				'photos_skipped' => $photo_skipped,
+				'booking_key'    => self::booking_key( $lead_id ),
 				'pdf_url' => $lead['pdf_url'],
 				'low'     => $est['low'],
 				'high'    => $est['high'],
@@ -400,6 +433,10 @@ class NSE_Leads {
 		}
 		$subject = ucfirst( strtr( $subj_tpl, $vars ) );
 		$body    = strtr( $body_tpl, $vars );
+		$booking = NSE_Settings::booking_url( $c );
+		if ( $booking ) {
+			$body .= "\n\nBook your free on-site visit: " . NSE_Settings::booking_prefill( $booking, $lead['name'], $lead['email'] );
+		}
 		$body   .= "\n\nDownload your estimate anytime: " . $lead['pdf_url'];
 
 		/* Replies go to the Reply-to setting, or the first lead recipient. */
@@ -473,6 +510,7 @@ class NSE_Leads {
 			'Estimate shown' => self::money( $lead['estimate_low'] ) . ' to ' . self::money( $lead['estimate_high'] ),
 			'Page'           => $lead['page'],
 			'Submitted'      => $lead['submitted'],
+			'Clicked to book' => ( $bc = (int) get_post_meta( $post->ID, '_pe_booking_click', true ) ) ? wp_date( 'M j, Y g:i a', $bc ) : '',
 			'reCAPTCHA score' => isset( $lead['recaptcha_score'] ) && '' !== $lead['recaptcha_score'] ? number_format( (float) $lead['recaptcha_score'], 1 ) . ' (1.0 = person, 0.0 = bot)' : '',
 			'Source'         => isset( $lead['source'] ) ? $lead['source'] : '',
 		);

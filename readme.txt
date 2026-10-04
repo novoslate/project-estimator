@@ -2,7 +2,7 @@
 Contributors: novoslate
 Requires at least: 6.0
 Requires PHP: 7.4
-Stable tag: 1.15.0
+Stable tag: 1.16.0
 License: GPLv2 or later
 
 Instant price estimators with lead capture for contractors.
@@ -128,6 +128,23 @@ With Elementor active, search for "Project Estimator" in the widget panel.
 
 Other page builders can start estimators added after page load with window.ProjectEstimator.start(element) or window.ProjectEstimator.boot().
 
+== Booking the on-site visit ==
+Add a booking link (Calendly, a Google Calendar booking page, Cal.com, Acuity, HubSpot meetings, or any https page) under Estimators > Settings for the whole site, or per estimator in its "After the quote" card.
+
+* After a quote request, the confirmation shows the price and a "Book your free on-site visit" button (button text is editable). Optionally the booking page is embedded right there.
+* The customer email and the PDF include the link (clickable in the PDF).
+* Calendly and Cal.com links get the customer's name and email filled in.
+* Clicks are recorded on the lead ("Clicked to book"), counted on the dashboard and in the client summary, included in the CSV, and sent to the dataLayer as project_estimator_booking_click. A Calendly embed also reports scheduled visits (project_estimator_booking_scheduled).
+
+== Price display ==
+Each estimator's Page text card has a Price display setting:
+
+* Show the price range as they go (default).
+* Show "Starting at" only: the low end updates live; the full range appears after the quote request.
+* Hide the price until they request a quote: the price bar says "Unlocks with your quote" and its button reads "See my price". Extras do not show dollar amounts.
+
+In every mode the full range appears on the confirmation, in the price bar after submitting, in the emails, and in the PDF.
+
 == Customer photos ==
 Turn on Photos in an estimator's Quote form card (Hidden, Optional, or Required). Visitors can add up to 6 photos of their space from the camera roll or camera.
 
@@ -182,6 +199,12 @@ Suggested Google Ads tracking template:
 Disable capture with: add_filter( 'pe_capture_attribution', '__return_false' );
 
 == Changelog ==
+= 1.16.0 =
+* Booking link after the quote: confirmation button or embedded booking page, plus links in the customer email and PDF, with name and email prefill for Calendly and Cal.com.
+* "Clicked to book" tracking on leads, the dashboard, the CSV, and the dataLayer.
+* Price display options: full range, "Starting at" only, or hidden until the quote request.
+* The confirmation now leads with the estimated price.
+
 = 1.15.0 =
 * Native Nutshell CRM integration: contact and lead for every quote request, with source, tags, assignee, lead value, and a detailed note.
 * Test connection loads Nutshell users, teams, and products.

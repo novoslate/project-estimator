@@ -18,7 +18,7 @@ class NSE_Transfer {
 	const BUSINESS_KEYS = array( 'name', 'phone', 'notify_email', 'cc', 'bcc', 'webhook_url' );
 
 	/** Site-wide settings that identify a specific client. */
-	const SETTINGS_CLIENT_KEYS = array( 'notify_email', 'cc', 'bcc', 'reply_to', 'webhook_alert', 'website' );
+	const SETTINGS_CLIENT_KEYS = array( 'notify_email', 'cc', 'bcc', 'reply_to', 'webhook_alert', 'website', 'booking_url' );
 
 	public static function init() {
 		add_action( 'admin_menu', array( __CLASS__, 'menu' ), 25 );
@@ -65,6 +65,7 @@ class NSE_Transfer {
 				foreach ( self::BUSINESS_KEYS as $k ) {
 					$c['business'][ $k ] = '';
 				}
+				$c['booking']['url'] = '';
 			}
 			$data['estimators'][] = array(
 				'title'  => get_the_title( $id ),
@@ -208,6 +209,7 @@ class NSE_Transfer {
 					foreach ( self::BUSINESS_KEYS as $k ) {
 						$incoming['business'][ $k ] = $current['business'][ $k ];
 					}
+					$incoming['booking']['url'] = $current['booking']['url'];
 				}
 				update_post_meta( $id, NSE_Config::META_KEY, wp_slash( wp_json_encode( $incoming ) ) );
 				$done[] = array( $id, 'replaced' );

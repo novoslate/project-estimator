@@ -42,6 +42,31 @@
 		try { return typeof window.peAttribution === 'function' ? window.peAttribution() : {}; } catch (e) { return {}; }
 	}
 
+	/* Booking tools that accept the customer's name and email in the link. */
+	function bookingLink(url, name, email) {
+		try {
+			var u = new URL(url);
+			if (/(^|\.)(calendly\.com|cal\.com)$/.test(u.hostname)) {
+				if (name) u.searchParams.set('name', name);
+				if (email) u.searchParams.set('email', email);
+			}
+			return u.toString();
+		} catch (e) { return url; }
+	}
+	/* Embed versions of booking pages where the tool needs one. */
+	function bookingEmbed(url) {
+		try {
+			var u = new URL(url);
+			if (/(^|\.)calendly\.com$/.test(u.hostname)) {
+				u.searchParams.set('embed_domain', window.location.hostname);
+				u.searchParams.set('embed_type', 'Inline');
+			} else if (u.hostname === 'calendar.google.com') {
+				u.searchParams.set('gv', 'true');
+			}
+			return u.toString();
+		} catch (e) { return url; }
+	}
+
 	function init(root) {
 		var cfg;
 		try { cfg = JSON.parse(root.getAttribute('data-config')); } catch (e) { return; }
@@ -77,6 +102,9 @@
 		var track = cfg.tracking || {};
 		var estId = Number(root.getAttribute('data-id'));
 		var estName = root.getAttribute('data-name') || '';
+		/* How prices show while building: the full range, "Starting at" only, or nothing until the request. */
+		var priceMode = ['range', 'starting', 'gated'].indexOf(cfg.price_display) !== -1 ? cfg.price_display : 'range';
+
 		/* Dashboard counters: one view and one start per visitor per estimator per day. */
 		var trackUrl = root.getAttribute('data-track') || '';
 		function trackEvent(ev) {
@@ -245,7 +273,7 @@
 						return h('label', { class: 'nse-addon' }, [
 							h('input', { type: 'checkbox', onchange: function (e) { state.addons[i] = e.target.checked; update(); } }),
 							h('span', { class: 'nse-addon-t' }, [h('span', { text: a.name }), a.note ? h('small', { text: a.note }) : null]),
-							h('span', { class: 'nse-addon-p', text: a.per_unit ? money(a.low) + ' per ' + unit : '+' + money(a.low) })
+							priceMode === 'gated' ? null : h('span', { class: 'nse-addon-p', text: a.per_unit ? money(a.low) + ' per ' + unit : '+' + money(a.low) })
 						]);
 					}))
 				]));
@@ -453,9 +481,11 @@
 
 		/* Sticky price bar */
 		var rangeEl = h('strong', {});
+		var submitted = false, barBtn = null;
+		var barLabel = h('small', { text: priceMode === 'starting' ? 'Starting at' : priceMode === 'gated' ? 'Your price' : 'Estimated price range' });
 		var barEl = h('div', { class: 'nse-bar', role: 'status', 'aria-live': 'polite' }, [
-			h('div', {}, [h('small', { text: 'Estimated price range' }), rangeEl]),
-			h('button', { type: 'button', class: 'nse-bar-btn', text: 'Get exact quote', onclick: function () {
+			h('div', {}, [barLabel, rangeEl]),
+			barBtn = h('button', { type: 'button', class: 'nse-bar-btn', text: priceMode === 'gated' ? 'See my price' : 'Get exact quote', onclick: function () {
 				if (stepped) {
 					showStep('contact', true);
 				} else {
@@ -686,7 +716,7 @@
 			outs.forEach(function (o, i) { o.textContent = num(state.dims[i]) + ' ft'; });
 			qtyEl.textContent = num(qty()) + ' ' + unit;
 			var e = estimate();
-			rangeEl.textContent = money(e.low) + ' to ' + money(e.high);
+			if (!submitted) rangeEl.textContent = priceMode === 'gated' ? 'Unlocks with your quote' : priceMode === 'starting' ? money(e.low) : money(e.low) + ' to ' + money(e.high);
 			drawVisual();
 		}
 
@@ -757,15 +787,60 @@
 					var list = h('ul', {}, [
 						h('li', { text: proj.name + (o ? ': ' + o.name : '') + (colors[state.color] ? ' in ' + colors[state.color].name : '') + ', ' + num(qty()) + ' ' + unit }),
 						h('li', { text: picked.length ? 'Extras: ' + picked.join(', ') : 'No extras' }),
-						res.j.low ? h('li', { text: 'Estimate: ' + money(res.j.low) + ' to ' + money(res.j.high) }) : null,
 						res.j.photos ? h('li', { text: res.j.photos + (res.j.photos === 1 ? ' photo' : ' photos') + ' sent' + (res.j.photos_skipped ? ' (' + res.j.photos_skipped + ' could not be sent)' : '') }) : null
 					]);
 					done.appendChild(h('h4', { text: 'Request sent' }));
+					/* The bar now shows the confirmed price, and its button is no longer needed. */
+					submitted = true;
+					if (res.j.low) {
+						barLabel.textContent = 'Your estimated price';
+						rangeEl.textContent = money(res.j.low) + ' to ' + money(res.j.high);
+					}
+					barBtn.hidden = true;
+					if (res.j.low) {
+						done.appendChild(h('div', { class: 'nse-price' }, [
+							h('small', { text: 'Your estimated price' }),
+							h('strong', { text: money(res.j.low) + ' to ' + money(res.j.high) })
+						]));
+					}
 					done.appendChild(h('p', { text: cfg.success_message }));
 					done.appendChild(list);
+					var booking = cfg.booking && cfg.booking.url ? cfg.booking : null;
+					if (booking) {
+						var bookUrl = bookingLink(booking.url, payload.name, payload.email);
+						var recordBooking = function (how) {
+							if (recordBooking.done) return;
+							recordBooking.done = true;
+							push({ event: 'project_estimator_booking_click', estimator_id: estId, estimator_name: estName, lead_id: String(res.j.lead_id || ''), method: how });
+							var bk = root.getAttribute('data-booking');
+							if (bk && res.j.lead_id && res.j.booking_key) {
+								var body = JSON.stringify({ lead_id: res.j.lead_id, key: res.j.booking_key });
+								try {
+									if (!(navigator.sendBeacon && navigator.sendBeacon(bk, new Blob([body], { type: 'application/json' })))) {
+										fetch(bk, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: body, keepalive: true });
+									}
+								} catch (e) { /* ignore */ }
+							}
+						};
+						var bookKids = [
+							h('p', { class: 'nse-book-l', text: 'Next step' }),
+							h('a', { class: 'nse-book-btn', href: bookUrl, target: '_blank', rel: 'noopener', text: booking.label || 'Book your free on-site visit', onclick: function () { recordBooking('button'); } })
+						];
+						if (booking.embed) {
+							bookKids.push(h('iframe', { class: 'nse-book-frame', src: bookingEmbed(bookUrl), title: booking.label || 'Book your on-site visit', loading: 'lazy' }));
+							/* Calendly reports a scheduled visit from inside its embed. */
+							window.addEventListener('message', function (ev) {
+								if (/calendly\.com$/.test((ev.origin || '').replace(/^https?:\/\//, '')) && ev.data && ev.data.event === 'calendly.event_scheduled') {
+									recordBooking('embed');
+									push({ event: 'project_estimator_booking_scheduled', estimator_id: estId, lead_id: String(res.j.lead_id || '') });
+								}
+							});
+						}
+						done.appendChild(h('div', { class: 'nse-book' }, bookKids));
+					}
 					if (res.j.pdf_url) {
 						done.appendChild(h('p', { class: 'nse-pdf' }, [
-							h('a', { class: 'nse-pdf-btn', href: res.j.pdf_url, target: '_blank', rel: 'noopener', text: 'Download your estimate (PDF)' })
+							h('a', { class: 'nse-pdf-btn' + (booking ? ' nse-pdf-btn--secondary' : ''), href: res.j.pdf_url, target: '_blank', rel: 'noopener', text: 'Download your estimate (PDF)' })
 						]));
 						if (payload.email) done.appendChild(h('p', { class: 'nse-pdf-note', text: 'We also emailed a copy to ' + payload.email + '.' }));
 					}

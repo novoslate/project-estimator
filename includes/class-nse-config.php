@@ -54,6 +54,7 @@ class NSE_Config {
 		unset( $c['business']['notify_email'], $c['business']['cc'], $c['business']['bcc'], $c['business']['webhook_url'] );
 		$c['design'] = NSE_Settings::resolve_design( $c );
 		$c['recaptcha'] = NSE_Recaptcha::public_config();
+		$c['booking']['url'] = NSE_Settings::booking_url( $c );
 		unset( $c['design_mode'] );
 		return $c;
 	}
@@ -86,6 +87,18 @@ class NSE_Config {
 		$out['disclaimer']      = isset( $c['disclaimer'] ) ? sanitize_textarea_field( (string) $c['disclaimer'] ) : $d['disclaimer'];
 		$out['project_label']   = self::text( $c, 'project_label', $d['project_label'] );
 		$out['round_to']        = max( 1, (int) ( isset( $c['round_to'] ) ? $c['round_to'] : 100 ) );
+		$out['price_display']   = ( isset( $c['price_display'] ) && in_array( $c['price_display'], array( 'range', 'starting', 'gated' ), true ) ) ? $c['price_display'] : 'range';
+
+		// Booking link after the quote. A blank URL uses the site-wide default.
+		$bk             = self::list_of( $c, 'booking' );
+		$out['booking'] = array(
+			'url'   => isset( $bk['url'] ) ? NSE_Settings::sanitize_booking_url( $bk['url'] ) : '',
+			'label' => self::text( $bk, 'label', 'Book your free on-site visit' ),
+			'embed' => ! empty( $bk['embed'] ),
+		);
+		if ( '' === $out['booking']['label'] ) {
+			$out['booking']['label'] = 'Book your free on-site visit';
+		}
 
 		// Business.
 		$b               = self::list_of( $c, 'business' );

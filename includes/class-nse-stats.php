@@ -184,6 +184,7 @@ class NSE_Stats {
 			'starts'    => 0,
 			'requests'  => 0,
 			'booked'    => 0,
+			'booking_clicks' => 0,
 			'pipeline'  => 0,
 			'booked_value' => 0,
 			'avg'       => 0,
@@ -243,6 +244,9 @@ class NSE_Stats {
 				continue;
 			}
 			$out['requests']++;
+			if ( get_post_meta( $id, '_pe_booking_click', true ) ) {
+				$out['booking_clicks']++;
+			}
 			$mid  = ( (float) ( isset( $l['estimate_low'] ) ? $l['estimate_low'] : 0 ) + (float) ( isset( $l['estimate_high'] ) ? $l['estimate_high'] : 0 ) ) / 2;
 			$sum += $mid;
 			$d    = get_post_time( 'Y-m-d', false, $id );

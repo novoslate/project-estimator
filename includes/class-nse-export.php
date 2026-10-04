@@ -208,7 +208,7 @@ class NSE_Export {
 			'Lead ID', 'Submitted', 'Status', 'Booked value', 'Name', 'Phone', 'Email', 'ZIP', 'Address', 'Timeline', 'Notes',
 			'Estimator', 'Project', 'Style', 'Color', 'Size', 'Extras', 'Estimate low', 'Estimate high',
 			'Source', 'Campaign', 'Keyword', 'UTM source', 'UTM medium', 'UTM content', 'Campaign ID', 'Ad group ID', 'Match type', 'Device',
-			'GCLID', 'GBRAID', 'WBRAID', 'MSCLKID', 'FBCLID', 'Landing page', 'Referrer', 'Submitted from', 'PDF', 'reCAPTCHA score', 'Photos',
+			'GCLID', 'GBRAID', 'WBRAID', 'MSCLKID', 'FBCLID', 'Landing page', 'Referrer', 'Submitted from', 'PDF', 'reCAPTCHA score', 'Photos', 'Clicked to book',
 		);
 		$rows = array( $head );
 		foreach ( $ids as $id ) {
@@ -266,6 +266,7 @@ class NSE_Export {
 				NSE_Pdf::path_for( $id ) ? NSE_Pdf::url( $id ) : '',
 				isset( $l['recaptcha_score'] ) ? $l['recaptcha_score'] : '',
 				implode( "\n", NSE_Photos::urls( $id ) ),
+				( $bc = (int) get_post_meta( $id, '_pe_booking_click', true ) ) ? wp_date( 'Y-m-d H:i', $bc ) : '',
 			);
 		}
 		return $rows;
