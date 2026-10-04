@@ -276,6 +276,12 @@ class NSE_Leads {
 		} catch ( Throwable $e ) {
 			NSE_Pdf::log( $e );
 		}
+		// Nutshell CRM: contact and lead, same delivery approach.
+		try {
+			NSE_Nutshell::queue( $lead_id );
+		} catch ( Throwable $e ) {
+			NSE_Pdf::log( $e );
+		}
 		if ( $pdf_path ) {
 			try {
 				self::email_customer( $c, $lead, $pdf_path );

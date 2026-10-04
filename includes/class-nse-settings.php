@@ -57,6 +57,7 @@ class NSE_Settings {
 			'website'      => '',
 			'reply_to'     => '',
 			'webhook_alert' => '',
+			'nutshell'     => NSE_Nutshell::defaults(),
 			'recaptcha'    => NSE_Recaptcha::defaults(),
 			'pdf'          => self::pdf_defaults(),
 			'design'       => self::design_defaults(),
@@ -178,6 +179,7 @@ class NSE_Settings {
 			'website'      => isset( $in['website'] ) ? self::sanitize_website( $in['website'] ) : '',
 			'reply_to'     => isset( $in['reply_to'] ) && is_email( sanitize_email( $in['reply_to'] ) ) ? sanitize_email( $in['reply_to'] ) : '',
 			'webhook_alert' => isset( $in['webhook_alert'] ) ? self::sanitize_emails( $in['webhook_alert'] ) : '',
+			'nutshell'     => NSE_Nutshell::sanitize( isset( $in['nutshell'] ) ? $in['nutshell'] : array() ),
 			'recaptcha'    => NSE_Recaptcha::sanitize( isset( $in['recaptcha'] ) ? $in['recaptcha'] : array() ),
 			'pdf'          => self::sanitize_pdf( isset( $in['pdf'] ) ? $in['pdf'] : array() ),
 			'design'       => self::sanitize_design( isset( $in['design'] ) ? $in['design'] : array() ),
@@ -196,6 +198,14 @@ class NSE_Settings {
 		if ( isset( $in['design'] ) && is_array( $in['design'] ) ) {
 			foreach ( array( 'show_business_name', 'show_step_numbers', 'sticky_bar' ) as $k ) {
 				$in['design'][ $k ] = ! empty( $in['design'][ $k ] );
+			}
+		}
+		if ( isset( $in['nutshell'] ) && is_array( $in['nutshell'] ) ) {
+			$in['nutshell']['enabled'] = ! empty( $in['nutshell']['enabled'] );
+			/* A blank API key field keeps the saved key. */
+			if ( empty( $in['nutshell']['api_key'] ) ) {
+				$saved                     = self::get();
+				$in['nutshell']['api_key'] = $saved['nutshell']['api_key'];
 			}
 		}
 		if ( isset( $in['recaptcha'] ) && is_array( $in['recaptcha'] ) ) {
@@ -445,11 +455,13 @@ class NSE_Settings {
 		$rname = function ( $k ) {
 			return esc_attr( self::OPTION . '[recaptcha][' . $k . ']' );
 		};
+		self::render_nutshell( $s );
+
 		echo '<h2 id="pe-webhook">CRM webhook</h2>';
-		echo '<p>Each estimator can send its leads to a webhook URL (for example a Zapier Catch Hook connected to the client\'s CRM). Failed deliveries are retried for about 9 hours; this address is emailed if a lead still could not be delivered.</p>';
+		echo '<p>Each estimator can send its leads to a webhook URL (for example a Zapier Catch Hook connected to the client\'s CRM). Failed deliveries (webhook or Nutshell) are retried for about 9 hours; this address is emailed if a lead still could not be delivered.</p>';
 		echo '<table class="form-table" role="presentation">';
 		printf(
-			'<tr><th scope="row"><label for="pe-wh-alert">Webhook failure alerts</label></th><td><input type="text" class="regular-text" id="pe-wh-alert" name="%s" value="%s" placeholder="%s"><p class="description">Leave blank to use the site admin email. Separate multiple addresses with commas.</p></td></tr>',
+			'<tr><th scope="row"><label for="pe-wh-alert">CRM failure alerts</label></th><td><input type="text" class="regular-text" id="pe-wh-alert" name="%s" value="%s" placeholder="%s"><p class="description">Leave blank to use the site admin email. Separate multiple addresses with commas.</p></td></tr>',
 			self::name( 'webhook_alert' ), // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- escaped in name().
 			esc_attr( $s['webhook_alert'] ),
 			esc_attr( get_option( 'admin_email' ) )
@@ -549,6 +561,87 @@ class NSE_Settings {
 		echo ' ';
 		submit_button( 'Reset to defaults', 'secondary', 'pe_reset_defaults', false, array( 'onclick' => "return confirm('Reset all estimator settings to defaults?');" ) );
 		echo '</p></form></div>';
+	}
+
+	private static function render_nutshell( array $s ) {
+		$n    = $s['nutshell'];
+		$name = function ( $k ) {
+			return esc_attr( self::OPTION . '[nutshell][' . $k . ']' );
+		};
+		echo '<h2 id="pe-nutshell">Nutshell CRM</h2>';
+		echo '<p>Send every quote request straight to Nutshell as a contact and a lead, with the estimate, selections, source, and links to the PDF and photos in the lead note. Create an API key in Nutshell (Settings, then API keys) and use the email address of a Nutshell user.</p>';
+		echo '<table class="form-table" role="presentation">';
+		printf( '<tr><th scope="row">Nutshell</th><td><label><input type="checkbox" name="%s" value="1"%s> Send quote requests to Nutshell</label></td></tr>', $name( 'enabled' ), checked( $n['enabled'], true, false ) ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
+		printf( '<tr><th scope="row"><label for="pe-ns-user">Nutshell user email</label></th><td><input type="text" class="regular-text" id="pe-ns-user" name="%s" value="%s" autocomplete="off" placeholder="you@company.com"></td></tr>', $name( 'username' ), esc_attr( $n['username'] ) ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
+		printf(
+			'<tr><th scope="row"><label for="pe-ns-key">API key</label></th><td><input type="password" class="regular-text code" id="pe-ns-key" name="%s" value="" autocomplete="new-password" placeholder="%s"><p class="description">%s</p><p><button type="button" class="button" id="pe-ns-test">Test connection</button> <span id="pe-ns-result" role="status"></span></p></td></tr>',
+			$name( 'api_key' ), // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
+			esc_attr( $n['api_key'] ? 'Saved (leave blank to keep it)' : 'Paste the API key' ),
+			esc_html( 'Stored on this site only. Never shown again, and never included in Import / Export.' )
+		);
+		$labels = $n['labels'];
+		$asg    = '<option value="">Nutshell default (no assignee)</option>';
+		$prd    = '<option value="0">None (leads have no dollar value)</option>';
+		foreach ( $labels as $val => $label ) {
+			if ( preg_match( '/^(Users|Teams):\d+$/', $val ) ) {
+				$asg .= sprintf( '<option value="%s"%s>%s</option>', esc_attr( $val ), selected( $n['assignee'], $val, false ), esc_html( ( 0 === strpos( $val, 'Teams' ) ? 'Team: ' : '' ) . $label ) );
+			} elseif ( ctype_digit( (string) $val ) ) {
+				$prd .= sprintf( '<option value="%s"%s>%s</option>', esc_attr( $val ), selected( (string) $n['product_id'], (string) $val, false ), esc_html( $label ) );
+			}
+		}
+		printf( '<tr><th scope="row"><label for="pe-ns-asg">Assign new leads to</label></th><td><select id="pe-ns-asg" name="%s">%s</select><p class="description">Click Test connection to load your Nutshell users and teams.</p></td></tr>', $name( 'assignee' ), $asg ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
+		printf( '<tr><th scope="row"><label for="pe-ns-prd">Lead value</label></th><td><select id="pe-ns-prd" name="%s">%s</select><p class="description">Nutshell sets a lead\'s value from its products. Pick a product (for example "Patio project") and each lead gets it priced at the middle of the estimate.</p></td></tr>', $name( 'product_id' ), $prd ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
+		printf(
+			'<tr><th scope="row">Lead source</th><td><label><input type="radio" name="%1$s" value="attribution"%2$s> The visitor\'s source (Google Ads, Organic search, Facebook...)</label><br><label><input type="radio" name="%1$s" value="fixed"%3$s> Always the name below</label><p><input type="text" class="regular-text" name="%4$s" value="%5$s"></p><p class="description">Used as the fixed source, and for direct visits. Sources are created in Nutshell if they don\'t exist.</p></td></tr>',
+			$name( 'source_mode' ), // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
+			checked( $n['source_mode'], 'attribution', false ),
+			checked( $n['source_mode'], 'fixed', false ),
+			$name( 'source_name' ), // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
+			esc_attr( $n['source_name'] )
+		);
+		printf( '<tr><th scope="row"><label for="pe-ns-tags">Tags</label></th><td><input type="text" class="regular-text" id="pe-ns-tags" name="%s" value="%s"><p class="description">Comma separated. Added to each lead and created in Nutshell if needed.</p></td></tr>', $name( 'tags' ), esc_attr( $n['tags'] ) ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
+		echo '</table><div id="pe-ns-labels">';
+		foreach ( $labels as $val => $label ) {
+			printf( '<input type="hidden" name="%s[%s]" value="%s">', esc_attr( self::OPTION . '[nutshell][labels]' ), esc_attr( $val ), esc_attr( $label ) );
+		}
+		echo '</div>';
+		$nonce = wp_create_nonce( 'pe_nutshell_test' );
+		?>
+		<script>
+		(function () {
+			var btn = document.getElementById('pe-ns-test'), out = document.getElementById('pe-ns-result');
+			if (!btn) return;
+			function fill(sel, items, keep, first) {
+				var cur = keep || sel.value;
+				sel.innerHTML = '';
+				sel.appendChild(new Option(first[1], first[0]));
+				items.forEach(function (it) { var o = new Option(it.label, it.value); if (it.value === cur) o.selected = true; sel.appendChild(o); });
+			}
+			btn.addEventListener('click', function () {
+				var fd = new FormData();
+				fd.append('action', 'pe_nutshell_test');
+				fd.append('nonce', <?php echo wp_json_encode( $nonce ); ?>);
+				fd.append('username', document.getElementById('pe-ns-user').value);
+				fd.append('api_key', document.getElementById('pe-ns-key').value);
+				btn.disabled = true; out.textContent = 'Connecting...'; out.style.color = '';
+				fetch(ajaxurl, { method: 'POST', body: fd, credentials: 'same-origin' }).then(function (r) { return r.json(); }).then(function (j) {
+					out.textContent = (j && j.data && j.data.message) || 'Unexpected response.';
+					out.style.color = j && j.success ? '#1F6B35' : '#B32D2E';
+					if (j && j.success) {
+						var people = j.data.users.concat(j.data.teams.map(function (t) { return { value: t.value, label: 'Team: ' + t.label }; }));
+						fill(document.getElementById('pe-ns-asg'), people, null, ['', 'Nutshell default (no assignee)']);
+						fill(document.getElementById('pe-ns-prd'), j.data.products, null, ['0', 'None (leads have no dollar value)']);
+						var box = document.getElementById('pe-ns-labels'); box.innerHTML = '';
+						j.data.users.concat(j.data.teams, j.data.products).forEach(function (it) {
+							var h = document.createElement('input'); h.type = 'hidden'; h.name = 'pe_settings[nutshell][labels][' + it.value + ']'; h.value = it.label; box.appendChild(h);
+						});
+					}
+				}).catch(function () { out.textContent = 'Could not reach WordPress.'; out.style.color = '#B32D2E'; })
+				.then(function () { btn.disabled = false; });
+			});
+		})();
+		</script>
+		<?php
 	}
 
 	private static function select_row( $label, $key, array $choices, $current ) {

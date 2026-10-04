@@ -83,7 +83,7 @@ class NSE_Transfer {
 			$s['recaptcha']['site_key']   = '';
 			$s['recaptcha']['secret_key'] = '';
 			$logo_id                      = $s['logo_id'];
-			unset( $s['logo_id'] );
+			unset( $s['logo_id'], $s['nutshell'] ); // CRM connections belong to one client and include a secret key.
 			$data['settings'] = $s;
 			$data['logo']     = self::logo_payload( $logo_id );
 		}
@@ -250,6 +250,7 @@ class NSE_Transfer {
 			if ( $current['recaptcha']['site_key'] || $current['recaptcha']['secret_key'] ) {
 				$incoming['recaptcha']['mode'] = $current['recaptcha']['mode'];
 			}
+			$incoming['nutshell']                = $current['nutshell']; // This site keeps its own CRM connection.
 			$logo                                = self::import_logo( isset( $data['logo'] ) ? $data['logo'] : null );
 			$incoming['logo_id']                 = $logo ? $logo : $current['logo_id'];
 			update_option( NSE_Settings::OPTION, NSE_Settings::sanitize( $incoming ) );

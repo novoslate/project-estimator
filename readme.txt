@@ -2,7 +2,7 @@
 Contributors: novoslate
 Requires at least: 6.0
 Requires PHP: 7.4
-Stable tag: 1.14.0
+Stable tag: 1.15.0
 License: GPLv2 or later
 
 Instant price estimators with lead capture for contractors.
@@ -38,6 +38,19 @@ Estimators > Settings holds defaults for every estimator:
 * Design defaults: style (card, soft shadow, or flat), accent, text, secondary text, background, and border colors, font, corners, max width, and whether to show the business name, step numbers, and a sticky price bar. Text on the accent color switches between white and dark automatically for readability.
 
 Each estimator has a Design card set to "Use global design settings" by default. Switch it to custom to style one estimator differently.
+
+== Nutshell CRM ==
+Estimators > Settings > Nutshell CRM sends each quote request straight to Nutshell through its JSON-RPC API (available on all Nutshell plans).
+
+1. In Nutshell, create an API key. Enter it with the email address of a Nutshell user.
+2. Click Test connection. It confirms the credentials and loads your users, teams, and products.
+3. Optionally assign new leads to a user or team, pick a product to give leads a dollar value (priced at the middle of the estimate), choose the lead source (the visitor's source, such as Google Ads, or a fixed name), and set tags.
+
+Each quote request finds the contact by email (or creates one with name, phone, email, and address) and creates a lead for that contact. The lead description summarizes the project, and the lead note holds the estimate, selections, timeline, customer notes, source, campaign, keyword, GCLID, and links to the PDF and photos. Missing sources and tags are created in Nutshell automatically.
+
+Delivery works like the webhook: sent after the visitor's confirmation, retried for about 9 hours, then an alert to "CRM failure alerts". Retries never create duplicate contacts or leads. A rejected API key stops right away with an alert. Each lead shows its Nutshell status, a link to the lead in Nutshell, and a Send to Nutshell button; the Leads list has a Nutshell column and a "Send to Nutshell" bulk action for older leads.
+
+The API key is stored only on the site, is never shown after saving, and is never included in Import / Export. The webhook and Nutshell can be used together.
 
 == CRM webhook ==
 Set a Webhook URL on an estimator (for example a Zapier "Catch Hook" that creates a lead in the client's CRM) and every quote request is sent there as JSON.
@@ -169,6 +182,12 @@ Suggested Google Ads tracking template:
 Disable capture with: add_filter( 'pe_capture_attribution', '__return_false' );
 
 == Changelog ==
+= 1.15.0 =
+* Native Nutshell CRM integration: contact and lead for every quote request, with source, tags, assignee, lead value, and a detailed note.
+* Test connection loads Nutshell users, teams, and products.
+* Retries, delivery log, link to the Nutshell lead, failure alerts, and a "Send to Nutshell" bulk action.
+* The webhook alert setting is now "CRM failure alerts" and covers Nutshell too.
+
 = 1.14.0 =
 * Elementor widget with an estimator picker, per-placement layout, and design overrides (colors, corner radius, max width, typography).
 * Live preview in the Elementor editor with submissions turned off.
