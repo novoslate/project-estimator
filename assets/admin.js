@@ -246,6 +246,7 @@
 			check('Show business name', 'design.show_business_name') +
 			check('Show step numbers', 'design.show_step_numbers') +
 			check('Sticky price bar', 'design.sticky_bar', 'Keeps the price visible at the bottom of the screen while scrolling.') +
+			check('Auto advance', 'design.auto_advance', 'Step by step layout: picking a project type, style, or color moves to the next step. Turn off to have visitors tap Next instead.') +
 			'</div><p><button type="button" class="button-link" data-action="design-reset">Copy the current global design into this estimator</button></p>',
 			'Custom design applies only to this estimator.');
 	}

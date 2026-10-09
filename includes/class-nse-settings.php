@@ -35,6 +35,7 @@ class NSE_Settings {
 			'show_business_name' => true,
 			'show_step_numbers'  => true,
 			'sticky_bar'         => true,
+			'auto_advance'       => true,
 		);
 	}
 
@@ -183,7 +184,7 @@ class NSE_Settings {
 		$out['font']      = ( isset( $d['font'] ) && isset( $ch['font'][ $d['font'] ] ) ) ? $d['font'] : $def['font'];
 		$out['radius']    = isset( $d['radius'] ) ? max( 0, min( 30, (int) $d['radius'] ) ) : $def['radius'];
 		$out['max_width'] = isset( $d['max_width'] ) ? max( 320, min( 1600, (int) $d['max_width'] ) ) : $def['max_width'];
-		foreach ( array( 'show_business_name', 'show_step_numbers', 'sticky_bar' ) as $k ) {
+		foreach ( array( 'show_business_name', 'show_step_numbers', 'sticky_bar', 'auto_advance' ) as $k ) {
 			$out[ $k ] = isset( $d[ $k ] ) ? (bool) $d[ $k ] : $def[ $k ];
 		}
 		return $out;
@@ -229,7 +230,7 @@ class NSE_Settings {
 		}
 		$in = is_array( $in ) ? $in : array();
 		if ( isset( $in['design'] ) && is_array( $in['design'] ) ) {
-			foreach ( array( 'show_business_name', 'show_step_numbers', 'sticky_bar' ) as $k ) {
+			foreach ( array( 'show_business_name', 'show_step_numbers', 'sticky_bar', 'auto_advance' ) as $k ) {
 				$in['design'][ $k ] = ! empty( $in['design'][ $k ] );
 			}
 		}
@@ -585,6 +586,7 @@ class NSE_Settings {
 			'show_business_name' => 'Business name above the headline',
 			'show_step_numbers'  => 'Step numbers',
 			'sticky_bar'         => 'Keep the price bar stuck to the bottom while scrolling',
+			'auto_advance'       => 'Step by step: move to the next step after a project type, style, or color is picked',
 		) as $key => $label ) {
 			printf(
 				'<label><input type="checkbox" name="%s" value="1"%s> %s</label><br>',

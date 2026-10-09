@@ -588,9 +588,10 @@
 		}
 		afterBuild = function () { if (stepped) showStep(stepKey, false); else placeVisual(); };
 
-		/* Tapping a project type, style, or color moves on to the next step. */
+		/* Tapping a project type, style, or color moves on to the next step, unless Auto advance is off. */
 		root.addEventListener('click', function (e) {
 			if (!stepped || !e.target.closest) return;
+			if (cfg.design && cfg.design.auto_advance === false) return;
 			var btn = e.target.closest('.nse-opt, .nse-color');
 			var sec = btn ? btn.closest('.nse-sec[data-step]') : null;
 			if (!sec || sec.getAttribute('data-step') !== stepKey) return;

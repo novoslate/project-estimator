@@ -109,6 +109,21 @@ class NSE_Elementor_Widget extends Widget_Base {
 			)
 		);
 
+		$this->add_control(
+			'auto_advance',
+			array(
+				'label'       => 'Auto advance',
+				'type'        => Controls_Manager::SELECT,
+				'options'     => array(
+					''    => 'Use the estimator setting',
+					'on'  => 'On: move to the next step after a pick',
+					'off' => 'Off: visitors tap Next',
+				),
+				'default'     => '',
+				'condition'   => array( 'layout!' => 'single' ),
+			)
+		);
+
 		$this->end_controls_section();
 
 		/* ---------- Style ---------- */
@@ -198,6 +213,9 @@ class NSE_Elementor_Widget extends Widget_Base {
 			}
 			return;
 		}
-		echo NSE_Frontend::render( $id, array( 'layout' => isset( $s['layout'] ) ? $s['layout'] : '' ) ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- escaped in render().
+		echo NSE_Frontend::render( $id, array(
+			'layout'       => isset( $s['layout'] ) ? $s['layout'] : '',
+			'auto_advance' => isset( $s['auto_advance'] ) ? $s['auto_advance'] : '',
+		) ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- escaped in render().
 	}
 }

@@ -31,8 +31,8 @@ class NSE_Frontend {
 	}
 
 	public static function shortcode( $atts ) {
-		$atts = shortcode_atts( array( 'id' => 0, 'layout' => '' ), $atts, 'project_estimator' );
-		return self::render( absint( $atts['id'] ), array( 'layout' => $atts['layout'] ) );
+		$atts = shortcode_atts( array( 'id' => 0, 'layout' => '', 'auto_advance' => '' ), $atts, 'project_estimator' );
+		return self::render( absint( $atts['id'] ), array( 'layout' => $atts['layout'], 'auto_advance' => $atts['auto_advance'] ) );
 	}
 
 	/**
@@ -40,6 +40,7 @@ class NSE_Frontend {
 	 *
 	 * @param int   $id   Estimator ID.
 	 * @param array $args layout: '', 'mobile', 'always', or 'single' to override the estimator's design setting.
+	 *                    auto_advance: '', 'on', or 'off' to override the estimator's Auto advance setting.
 	 */
 	public static function render( $id, array $args = array() ) {
 		$post = $id ? get_post( $id ) : null;
@@ -66,6 +67,12 @@ class NSE_Frontend {
 		$layout = isset( $args['layout'] ) ? sanitize_key( $args['layout'] ) : '';
 		if ( isset( NSE_Settings::choices()['layout'][ $layout ] ) ) {
 			$config['design']['layout'] = $layout;
+		}
+		$adv = isset( $args['auto_advance'] ) ? sanitize_key( $args['auto_advance'] ) : '';
+		if ( in_array( $adv, array( 'on', 'yes', '1', 'true' ), true ) ) {
+			$config['design']['auto_advance'] = true;
+		} elseif ( in_array( $adv, array( 'off', 'no', '0', 'false' ), true ) ) {
+			$config['design']['auto_advance'] = false;
 		}
 		if ( $editor ) {
 			$config['recaptcha'] = null;

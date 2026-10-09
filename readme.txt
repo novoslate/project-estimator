@@ -2,7 +2,7 @@
 Contributors: novoslate
 Requires at least: 6.0
 Requires PHP: 7.4
-Stable tag: 1.16.0
+Stable tag: 1.17.0
 License: GPLv2 or later
 
 Instant price estimators with lead capture for contractors.
@@ -121,7 +121,7 @@ Uses FPDF (lib/fpdf), which is free to use, modify, and distribute.
 == Elementor ==
 With Elementor active, search for "Project Estimator" in the widget panel.
 
-* Content: pick a published estimator and, optionally, override its layout for this placement.
+* Content: pick a published estimator and, optionally, override its layout and Auto advance for this placement.
 * Style: optional design overrides (accent, text on accent, text, secondary text, background, borders, selected option background, corner radius, max width, and typography). Blank fields keep the estimator's design. Elementor global colors and fonts work here too.
 * In the editor the estimator renders live, but quote requests are turned off ("Preview only") and nothing is tracked, so building pages never creates leads.
 * The widget is never cached by Elementor's element caching, since its output differs for visitors and logged-in editors.
@@ -162,7 +162,7 @@ The Layout design setting (site-wide under Estimators > Settings, or per estimat
 * Step by step on all screens.
 * Single page on all screens.
 
-In step by step mode, tapping a project type, style, or color moves on automatically, Back and Next buttons move between steps, and the 3D preview stays on screen above the style, color, size, and extras steps. The sticky price bar stays visible, and its button jumps to the contact step. Each step sends a project_estimator_step event (step, step_number, step_total) to the dataLayer for funnel reports in GA4.
+In step by step mode, tapping a project type, style, or color moves on automatically (turn off Auto advance in the design settings to have visitors tap Next instead), Back and Next buttons move between steps, and the 3D preview stays on screen above the style, color, size, and extras steps. The sticky price bar stays visible, and its button jumps to the contact step. Each step sends a project_estimator_step event (step, step_number, step_total) to the dataLayer for funnel reports in GA4.
 
 == Live preview ==
 Each project type shows a live 3D-style illustration that updates as visitors change the style, size, and extras. Visitors can switch to a top-down view.
@@ -199,6 +199,10 @@ Suggested Google Ads tracking template:
 Disable capture with: add_filter( 'pe_capture_attribution', '__return_false' );
 
 == Changelog ==
+= 1.17.0 =
+* New Auto advance design setting. Turn it off and step by step mode stays on the current step after a pick, so visitors move on with Next.
+* Per-placement Auto advance override in the Elementor widget and the shortcode: [project_estimator id="123" auto_advance="off"].
+
 = 1.16.0 =
 * Booking link after the quote: confirmation button or embedded booking page, plus links in the customer email and PDF, with name and email prefill for Calendly and Cal.com.
 * "Clicked to book" tracking on leads, the dashboard, the CSV, and the dataLayer.
