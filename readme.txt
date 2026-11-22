@@ -2,7 +2,7 @@
 Contributors: novoslate
 Requires at least: 6.0
 Requires PHP: 7.4
-Stable tag: 1.17.0
+Stable tag: 1.17.1
 License: GPLv2 or later
 
 Instant price estimators with lead capture for contractors.
@@ -199,6 +199,10 @@ Suggested Google Ads tracking template:
 Disable capture with: add_filter( 'pe_capture_attribution', '__return_false' );
 
 == Changelog ==
+= 1.17.1 =
+* New Novoslate Ops setting: with an Ops token saved, each lead is also sent to Novoslate Ops for lead quality tracking (source, Google Ads click id, UTMs, landing page, estimate, Nutshell lead id, won or lost). Email and phone are sent only as SHA-256 hashes; no address, notes, photos or PDF.
+* Leads are sent again when Nutshell returns its lead id or the lead status changes, with retries like the CRM webhook.
+
 = 1.17.0 =
 * New Auto advance design setting. Turn it off and step by step mode stays on the current step after a pick, so visitors move on with Next.
 * Per-placement Auto advance override in the Elementor widget and the shortcode: [project_estimator id="123" auto_advance="off"].

@@ -60,6 +60,7 @@ class NSE_Settings {
 			'booking_url'  => '',
 			'webhook_alert' => '',
 			'nutshell'     => NSE_Nutshell::defaults(),
+			'ops'          => NSE_Ops::defaults(),
 			'recaptcha'    => NSE_Recaptcha::defaults(),
 			'pdf'          => self::pdf_defaults(),
 			'design'       => self::design_defaults(),
@@ -214,6 +215,7 @@ class NSE_Settings {
 			'booking_url'  => isset( $in['booking_url'] ) ? self::sanitize_booking_url( $in['booking_url'] ) : '',
 			'webhook_alert' => isset( $in['webhook_alert'] ) ? self::sanitize_emails( $in['webhook_alert'] ) : '',
 			'nutshell'     => NSE_Nutshell::sanitize( isset( $in['nutshell'] ) ? $in['nutshell'] : array() ),
+			'ops'          => NSE_Ops::sanitize( isset( $in['ops'] ) ? $in['ops'] : array() ),
 			'recaptcha'    => NSE_Recaptcha::sanitize( isset( $in['recaptcha'] ) ? $in['recaptcha'] : array() ),
 			'pdf'          => self::sanitize_pdf( isset( $in['pdf'] ) ? $in['pdf'] : array() ),
 			'design'       => self::sanitize_design( isset( $in['design'] ) ? $in['design'] : array() ),
@@ -240,6 +242,16 @@ class NSE_Settings {
 			if ( empty( $in['nutshell']['api_key'] ) ) {
 				$saved                     = self::get();
 				$in['nutshell']['api_key'] = $saved['nutshell']['api_key'];
+			}
+		}
+		if ( isset( $in['ops'] ) && is_array( $in['ops'] ) ) {
+			/* A blank token field keeps the saved token; "-" clears it. */
+			$given = isset( $in['ops']['token'] ) ? trim( (string) $in['ops']['token'] ) : '';
+			if ( '-' !== $given && 48 !== strlen( preg_replace( '/[^A-Fa-f0-9]/', '', $given ) ) ) {
+				$saved              = self::get();
+				$in['ops']['token'] = $saved['ops']['token'];
+			} elseif ( '-' === $given ) {
+				$in['ops']['token'] = '';
 			}
 		}
 		if ( isset( $in['recaptcha'] ) && is_array( $in['recaptcha'] ) ) {
@@ -496,6 +508,7 @@ class NSE_Settings {
 			return esc_attr( self::OPTION . '[recaptcha][' . $k . ']' );
 		};
 		self::render_nutshell( $s );
+		self::render_ops( $s );
 
 		echo '<h2 id="pe-webhook">CRM webhook</h2>';
 		echo '<p>Each estimator can send its leads to a webhook URL (for example a Zapier Catch Hook connected to the client\'s CRM). Failed deliveries (webhook or Nutshell) are retried for about 9 hours; this address is emailed if a lead still could not be delivered.</p>';
@@ -602,6 +615,21 @@ class NSE_Settings {
 		echo ' ';
 		submit_button( 'Reset to defaults', 'secondary', 'pe_reset_defaults', false, array( 'onclick' => "return confirm('Reset all estimator settings to defaults?');" ) );
 		echo '</p></form></div>';
+	}
+
+	private static function render_ops( array $s ) {
+		$o = $s['ops'];
+		echo '<h2 id="pe-ops">Novoslate Ops</h2>';
+		echo '<p>Sends each lead to Novoslate Ops to track lead quality: where it came from (Google Ads click id, UTMs, landing page), the estimate, and whether it was won. Email and phone are sent only as one-way hashes; no name beyond the first word, address, notes, photos or PDF.</p>';
+		echo '<table class="form-table" role="presentation">';
+		printf(
+			'<tr><th scope="row"><label for="pe-ops-token">Ops token</label></th><td><input type="password" class="regular-text" id="pe-ops-token" name="%s" value="" autocomplete="off" placeholder="%s"><p class="description">%s</p></td></tr>',
+			esc_attr( self::OPTION . '[ops][token]' ),
+			esc_attr( $o['token'] ? 'Saved. Leave blank to keep it.' : 'Paste the leads token from Ops' ),
+			esc_html( $o['token'] ? 'Leads are being sent to Ops. Enter - to stop.' : 'Find it in Ops on the client page, Leads section. Leads are not sent until a token is saved.' )
+		);
+		echo '</table>';
+		echo '<input type="hidden" name="' . esc_attr( self::OPTION . '[ops][url]' ) . '" value="' . esc_attr( $o['url'] ) . '">';
 	}
 
 	private static function render_nutshell( array $s ) {

@@ -314,6 +314,12 @@ class NSE_Leads {
 		} catch ( Throwable $e ) {
 			NSE_Pdf::log( $e );
 		}
+		// Novoslate Ops: lead quality tracking, hashed contact details only.
+		try {
+			NSE_Ops::queue( $lead_id );
+		} catch ( Throwable $e ) {
+			NSE_Pdf::log( $e );
+		}
 		if ( $pdf_path ) {
 			try {
 				self::email_customer( $c, $lead, $pdf_path );

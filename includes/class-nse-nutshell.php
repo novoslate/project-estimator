@@ -456,6 +456,8 @@ class NSE_Nutshell {
 		if ( $ok ) {
 			$s['status'] = 'delivered';
 			$s['next']   = 0;
+			self::save_state( $lead_id, $s );
+			do_action( 'pe_nutshell_delivered', $lead_id, $s['lead_id'] );
 		} elseif ( ! $permanent && $s['tries'] <= count( self::BACKOFF ) ) {
 			$s['status'] = 'retrying';
 			$s['next']   = time() + self::BACKOFF[ $s['tries'] - 1 ];

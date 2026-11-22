@@ -57,6 +57,7 @@ class NSE_Status {
 			$log[ $status ] = time();
 			update_post_meta( $lead_id, self::META_LOG, $log );
 		}
+		do_action( 'pe_status_changed', $lead_id, $status );
 	}
 
 	/**
